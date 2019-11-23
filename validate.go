@@ -6,6 +6,36 @@ var emailRegexPattern = "^(?:(?:(?:(?:[a-zA-Z]|\\d|[!#\\$%&'\\*\\+\\-\\/=\\?\\^_
 
 var emailRegex = regexp.MustCompile(emailRegexPattern)
 
-func ValidateEmail(email string) bool {
+func IsEmailValid(email string) bool {
 	return emailRegex.MatchString(email)
+}
+
+func validateEmail(email string) error {
+	if email == "" {
+		return ErrEmailRequired
+	}
+	if !IsEmailValid(email) {
+		return ErrInvalidEmail
+	}
+	return nil
+}
+
+func validatePassword(password string) error {
+	if password == "" {
+		return ErrPasswordRequired
+	}
+	if len(password) < 6 {
+		return ErrPasswordTooShort
+	}
+	return nil
+}
+
+func validateEmailAndPassword(email, password string) error {
+	if err := validateEmail(email); err != nil {
+		return err
+	}
+	if err := validatePassword(password); err != nil {
+		return err
+	}
+	return nil
 }
