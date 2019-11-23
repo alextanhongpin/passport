@@ -13,3 +13,14 @@ type Recoverable struct {
 func (r Recoverable) IsValid() bool {
 	return time.Since(r.ResetPasswordSentAt) < RecoverableTokenValidity
 }
+
+func NewRecoverable() Recoverable {
+	return Recoverable{
+		// Instead of using the Postgres UUID, we set it here.
+		// This allows us to change the implementation at the
+		// application level.
+		ResetPasswordToken:  uuid.Must(uuid.NewV4()),
+		ResetPasswordSentAt: time.Now(),
+		AllowPasswordChange: true,
+	}
+}

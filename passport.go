@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/alextanhongpin/passwd"
 )
@@ -38,6 +37,7 @@ func (s *serviceImpl) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 		// 2. match errors and handle it yourself.
 		return nil, ErrConfirmationRequired
 	}
+
 	match, err := passwd.Compare(user.EncryptedPassword, password)
 	if err != nil {
 		return nil, err
@@ -58,10 +58,12 @@ func (s *serviceImpl) Register(ctx context.Context, req RegisterRequest) (*Regis
 	if err := validateEmailAndPassword(email, password); err != nil {
 		return nil, err
 	}
-	encrypted, err := passwd.Encrypt(req.Password)
+
+	encrypted, err := passwd.Encrypt(password)
 	if err != nil {
 		return nil, fmt.Errorf("encrypt password failed: %w", err)
 	}
+
 	user, err := s.users.Create(ctx, email, encrypted)
 	if err != nil {
 		return nil, fmt.Errorf("create user failed: %w", err)
@@ -85,16 +87,9 @@ func (s *ServiceImpl) SendResetPassword(ctx context.Context, req SendResetPasswo
 	if err != nil {
 		return nil, err
 	}
-	// This should replace the old token if multiple reset password is invoked.
-	recoverable := Recoverable{
-		// Instead of using the Postgres UUID, we set it here.
-		// This allows us to change the implementation at the
-		// application level.
-		ResetPasswordToken:  uuid.Must(uuid.NewV4()),
-		ResetPasswordSentAt: time.Now(),
-		AllowPasswordChange: true,
-	}
 
+	// This should replace the old token if multiple reset password is invoked.
+	recoverable := NewRecoverable()
 	success, err := s.users.UpdateRecoverable(user, recoverable)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrEmailNotFound
@@ -102,6 +97,7 @@ func (s *ServiceImpl) SendResetPassword(ctx context.Context, req SendResetPasswo
 	if err != nil {
 		return nil, err
 	}
+
 	// Return enough data for us to send the email.
 	return &ResetPasswordResponse{
 		Token: recoverable.ResetPasswordToken,
@@ -127,6 +123,7 @@ func (s *ServiceImpl) ResetPassword(ctx context.Context, req ResetPasswordReques
 	if err := validatePassword(password); err != nil {
 		return nil, err
 	}
+
 	user, err := s.users.WithResetPasswordToken(token)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrEmailNotFound
@@ -134,6 +131,7 @@ func (s *ServiceImpl) ResetPassword(ctx context.Context, req ResetPasswordReques
 	if err != nil {
 		return nil, err
 	}
+
 	recoverable := user.Recoverable
 	if !recoverable.IsValid() {
 		return nil, ErrTokenExpired
@@ -159,19 +157,13 @@ func (s *ServiceImpl) ResetPassword(ctx context.Context, req ResetPasswordReques
 	if err != nil {
 		return nil, fmt.Errorf("encrypt password failed: %w", err)
 	}
+
 	success, err := s.users.UpdatePassword(user, encrypted)
 	if err != nil {
 		return nil, err
 	}
 
-	recoverable := Recoverable{
-		// Instead of using the Postgres UUID, we set it here.
-		// This allows us to change the implementation at the
-		// application level.
-		ResetPasswordToken:  "",
-		ResetPasswordSentAt: nil,
-		AllowPasswordChange: false,
-	}
+	var recoverable Recoverable
 	success, err := s.users.UpdateRecoverable(user, recoverable)
 	if err != nil {
 		return nil, err
@@ -206,11 +198,7 @@ func (s *serviceImpl) SendConfirmation(ctx context.Context, req SendConfirmation
 		return nil, ErrEmailVerified
 	}
 
-	confirmable := Confirmable{
-		ConfirmationToken:  uuid.Must(uuid.NewV4()),
-		ConfirmationSentAt: time.Now(),
-		UnconfirmedEmail:   email,
-	}
+	confirmable := NewConfirmable(email)
 	// This will set email verified to false.
 	ok, err := s.users.UpdateConfirmable(user, confirmable)
 	if err != nil {
@@ -245,16 +233,12 @@ func (s *serviceImpl) Confirm(ctx context.Context, req ConfirmRequest) (*Confirm
 		return nil, ErrTokenExpired
 	}
 
-	confirmable := Confirmable{
-		ConfirmationToken:  "",
-		ConfirmationSentAt: nil,
-		UnconfirmedEmail:   "",
-	}
-
+	var confirmable Confirmable
 	success, err := s.users.UpdateConfirmable(user, confirmable)
 	if err != nil {
 		return nil, err
 	}
+
 	return &ConfirmationResponse{
 		Success: true,
 	}, nil
@@ -265,6 +249,7 @@ func (s *serviceImpl) ChangeEmail(ctx context.Context, req ChangeEmailRequest) (
 	if err := validateEmail(email); err != nil {
 		return nil, err
 	}
+
 	exists, err := s.users.HasEmail(email)
 	if err != nil {
 		return nil, err
@@ -272,15 +257,13 @@ func (s *serviceImpl) ChangeEmail(ctx context.Context, req ChangeEmailRequest) (
 	if exists {
 		return nil, ErrEmailExists
 	}
-	confirmable := Confirmable{
-		ConfirmationToken:  uuid.Must(uuid.NewV4()),
-		ConfirmationSentAt: time.Now(),
-		UnconfirmedEmail:   email,
-	}
+
+	confirmable := NewConfirmable(email)
 	ok, err := s.users.UpdateConfirmable(user, confirmable)
 	if err != nil {
 		return nil, err
 	}
+
 	// Return the confirmable in order to send the email.
 	return &SendConfirmationResponse{
 		Token: confirmable.ConfirmationToken,

@@ -17,3 +17,11 @@ type Confirmable struct {
 func (c Confirmable) IsValid() bool {
 	return time.Since(c.ConfirmationSentAt) < ConfirmationTokenValidity
 }
+
+func NewConfirmable(email string) Confirmable {
+	return Confirmable{
+		ConfirmationToken:  uuid.Must(uuid.NewV4()),
+		ConfirmationSentAt: time.Now(),
+		UnconfirmedEmail:   email,
+	}
+}
