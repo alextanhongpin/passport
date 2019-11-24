@@ -77,8 +77,15 @@ func NewChangeEmail(users changeEmailRepository) ChangeEmail {
 			return nil, err
 		}
 
+		var (
+			userEmail = strings.TrimSpace(user.Email)
+		)
+		if err := validateEmail(userEmail); err != nil {
+			return nil, err
+		}
+
 		var confirmable = NewConfirmable(email)
-		success, err := users.UpdateConfirmable(ctx, user.Email, confirmable)
+		success, err := users.UpdateConfirmable(ctx, userEmail, confirmable)
 		if err != nil {
 			return nil, err
 		}

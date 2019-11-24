@@ -78,7 +78,7 @@ func NewChangePassword(users changePasswordRepository) ChangePassword {
 			return nil, err
 		}
 
-		success, err := users.UpdatePassword(ctx, user.ID, encrypted)
+		success, err := users.UpdatePassword(ctx, userID, encrypted)
 		if err != nil {
 			return nil, err
 		}

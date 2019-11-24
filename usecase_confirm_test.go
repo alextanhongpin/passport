@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/passport"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,6 +31,7 @@ func TestConfirmTokenExpired(t *testing.T) {
 	assert := assert.New(t)
 	res, err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
+			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
 				ConfirmationSentAt: time.Now().Add(-25 * time.Hour),
 				ConfirmationToken:  "",
@@ -45,6 +47,7 @@ func TestConfirmTokenEmailVerified(t *testing.T) {
 	assert := assert.New(t)
 	res, err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
+			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
 				ConfirmationSentAt: time.Now().Add(-23 * time.Hour),
 				ConfirmedAt:        time.Now(),
@@ -61,6 +64,7 @@ func TestConfirmEmailSuccess(t *testing.T) {
 	assert := assert.New(t)
 	res, err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
+			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
 				ConfirmationSentAt: time.Now().Add(-23 * time.Hour),
 				ConfirmedAt:        time.Now(),

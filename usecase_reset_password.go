@@ -30,24 +30,6 @@ type resetPasswordRepository interface {
 	UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
 }
 
-type ResetPasswordRepository struct {
-	withResetPasswordToken WithResetPasswordToken
-	updatePassword         UpdatePassword
-	updateRecoverable      UpdateRecoverable
-}
-
-func (r *ResetPasswordRepository) WithResetPasswordToken(ctx context.Context, token string) (*User, error) {
-	return r.withResetPasswordToken(ctx, token)
-}
-
-func (r *ResetPasswordRepository) UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error) {
-	return r.updatePassword(ctx, userID, encryptedPassword)
-}
-
-func (r *ResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
-	return r.updateRecoverable(ctx, email, recoverable)
-}
-
 func NewResetPassword(users resetPasswordRepository) ResetPassword {
 	return func(ctx context.Context, req ResetPasswordRequest) (*ResetPasswordResponse, error) {
 		var (
@@ -58,11 +40,11 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 		if token == "" {
 			return nil, ErrTokenRequired
 		}
-		if password != confirmPassword {
-			return nil, ErrPasswordDoNotMatch
-		}
 		if err := validatePassword(password); err != nil {
 			return nil, err
+		}
+		if password != confirmPassword {
+			return nil, ErrPasswordDoNotMatch
 		}
 
 		user, err := users.WithResetPasswordToken(ctx, token)
@@ -98,18 +80,24 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 			return nil, err
 		}
 
-		success, err := users.UpdatePassword(ctx, user.ID, encrypted)
+		var (
+			userID    = strings.TrimSpace(user.ID)
+			userEmail = strings.TrimSpace(user.Email)
+		)
+		if userID == "" {
+			return nil, ErrUserIDRequired
+		}
+		if err := validateEmail(userEmail); err != nil {
+			return nil, ErrEmailRequired
+		}
+
+		success, err := users.UpdatePassword(ctx, userID, encrypted)
 		if err != nil {
 			return nil, err
 		}
-		if !success {
-			return &ResetPasswordResponse{
-				Success: success,
-			}, nil
-		}
 
 		var recoverable Recoverable
-		success, err = users.UpdateRecoverable(ctx, user.Email, recoverable)
+		success, err = users.UpdateRecoverable(ctx, userEmail, recoverable)
 		if err != nil {
 			return nil, err
 		}
@@ -120,4 +108,22 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 			User:    *user,
 		}, nil
 	}
+}
+
+type ResetPasswordRepository struct {
+	withResetPasswordToken WithResetPasswordToken
+	updatePassword         UpdatePassword
+	updateRecoverable      UpdateRecoverable
+}
+
+func (r *ResetPasswordRepository) WithResetPasswordToken(ctx context.Context, token string) (*User, error) {
+	return r.withResetPasswordToken(ctx, token)
+}
+
+func (r *ResetPasswordRepository) UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error) {
+	return r.updatePassword(ctx, userID, encryptedPassword)
+}
+
+func (r *ResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
+	return r.updateRecoverable(ctx, email, recoverable)
 }

@@ -26,11 +26,11 @@ type registerRepository interface {
 }
 
 type RegisterRepository struct {
-	create Create
+	CreateFunc Create
 }
 
 func (r *RegisterRepository) Create(ctx context.Context, email, password string) (*User, error) {
-	return r.create(ctx, email, password)
+	return r.CreateFunc(ctx, email, password)
 }
 
 func NewRegister(users registerRepository) Register {
@@ -46,6 +46,10 @@ func NewRegister(users registerRepository) Register {
 		encrypted, err := passwd.Encrypt(password)
 		if err != nil {
 			return nil, err
+		}
+
+		if password == encrypted {
+			panic("forgetting some validation here?")
 		}
 
 		user, err := users.Create(ctx, email, encrypted)

@@ -37,6 +37,14 @@ func NewConfirm(users confirmRepository) Confirm {
 			return nil, err
 		}
 
+		var (
+			email = strings.TrimSpace(user.Email)
+		)
+
+		if err := validateEmail(email); err != nil {
+			return nil, err
+		}
+
 		if user.Confirmable.IsVerified() {
 			return nil, ErrEmailVerified
 		}

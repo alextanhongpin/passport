@@ -8,24 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockRegisterRepository struct {
-	user *passport.User
-	err  error
-}
-
-func (m *mockRegisterRepository) Create(ctx context.Context, email, password string) (*passport.User, error) {
-	return m.user, m.err
-}
-
-func register(repo *mockRegisterRepository, email, password string) (*passport.RegisterResponse, error) {
-	return passport.NewRegister(repo)(
-		context.TODO(),
-		passport.RegisterRequest{email, password},
-	)
-}
-
 func TestRegisterValidation(t *testing.T) {
-
 	tests := []struct {
 		name     string
 		email    string
@@ -44,7 +27,36 @@ func TestRegisterValidation(t *testing.T) {
 			assert := assert.New(t)
 			res, err := register(&mockRegisterRepository{}, tt.email, tt.password)
 			assert.Nil(res)
-			assert.Equal(err, tt.err)
+			assert.Equal(tt.err, err)
 		})
 	}
+}
+
+func TestUserRegisterSuccess(t *testing.T) {
+	assert := assert.New(t)
+	var (
+		email    = "john.doe@mail.com"
+		password = "123456"
+	)
+	res, err := register(&mockRegisterRepository{
+		user: &passport.User{},
+	}, email, password)
+	assert.Nil(err)
+	assert.NotNil(res)
+}
+
+type mockRegisterRepository struct {
+	user *passport.User
+	err  error
+}
+
+func (m *mockRegisterRepository) Create(ctx context.Context, email, password string) (*passport.User, error) {
+	return m.user, m.err
+}
+
+func register(repo *mockRegisterRepository, email, password string) (*passport.RegisterResponse, error) {
+	return passport.NewRegister(repo)(
+		context.TODO(),
+		passport.RegisterRequest{email, password},
+	)
 }

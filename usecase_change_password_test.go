@@ -7,6 +7,7 @@ import (
 
 	"github.com/alextanhongpin/passport"
 	"github.com/alextanhongpin/passwd"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -75,6 +76,7 @@ func TestChangePasswordSuccess(t *testing.T) {
 
 	repo := &mockChangePasswordRepository{
 		findResponse: &passport.User{
+			ID:                "xyz",
 			EncryptedPassword: encryptedPassword,
 		},
 		updatePasswordResponse: true,

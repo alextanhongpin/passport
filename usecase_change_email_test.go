@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/passport"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,6 +57,7 @@ func TestChangeEmailSuccess(t *testing.T) {
 	assert := assert.New(t)
 	repo := &mockChangeEmailRepository{
 		findResponse: &passport.User{
+			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
 				ConfirmationToken:  "xyz",
 				ConfirmationSentAt: time.Now(),
