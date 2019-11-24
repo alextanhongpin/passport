@@ -49,7 +49,6 @@ func (r *ResetPasswordRepository) UpdateRecoverable(ctx context.Context, email s
 }
 
 func NewResetPassword(users resetPasswordRepository) ResetPassword {
-
 	return func(ctx context.Context, req ResetPasswordRequest) (*ResetPasswordResponse, error) {
 		var (
 			token           = strings.TrimSpace(req.Token)

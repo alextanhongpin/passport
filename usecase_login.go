@@ -9,13 +9,11 @@ import (
 	"github.com/alextanhongpin/passwd"
 )
 
-type (
-	Login func(context.Context, LoginRequest) (*LoginResponse, error)
+type Login func(context.Context, LoginRequest) (*LoginResponse, error)
 
-	loginRepository interface {
-		WithEmail(ctx context.Context, email string) (*User, error)
-	}
-)
+type loginRepository interface {
+	WithEmail(ctx context.Context, email string) (*User, error)
+}
 
 type (
 	LoginRequest struct {
