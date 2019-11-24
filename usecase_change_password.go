@@ -28,16 +28,16 @@ type changePasswordRepository interface {
 }
 
 type ChangePasswordRepository struct {
-	find           Find
-	updatePassword UpdatePassword
+	FindFunc           Find
+	UpdatePasswordFunc UpdatePassword
 }
 
 func (c *ChangePasswordRepository) Find(ctx context.Context, id string) (*User, error) {
-	return c.find(ctx, id)
+	return c.FindFunc(ctx, id)
 }
 
 func (c *ChangePasswordRepository) UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error) {
-	return c.updatePassword(ctx, userID, encryptedPassword)
+	return c.UpdatePasswordFunc(ctx, userID, encryptedPassword)
 }
 
 func NewChangePassword(users changePasswordRepository) ChangePassword {
@@ -47,11 +47,14 @@ func NewChangePassword(users changePasswordRepository) ChangePassword {
 			password        = strings.TrimSpace(req.Password)
 			confirmPassword = strings.TrimSpace(req.ConfirmPassword)
 		)
+		if err := validatePassword(password); err != nil {
+			return nil, err
+		}
 		if password != confirmPassword {
 			return nil, ErrPasswordDoNotMatch
 		}
-		if err := validatePassword(password); err != nil {
-			return nil, err
+		if userID == "" {
+			return nil, ErrUserIDRequired
 		}
 
 		user, err := users.Find(ctx, userID)

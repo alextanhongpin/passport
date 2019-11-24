@@ -23,19 +23,6 @@ type confirmRepository interface {
 	UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
 }
 
-type ConfirmRepository struct {
-	withConfirmationToken WithConfirmationToken
-	updateConfirmable     UpdateConfirmable
-}
-
-func (c *ConfirmRepository) WithConfirmationToken(ctx context.Context, token string) (*User, error) {
-	return c.withConfirmationToken(ctx, token)
-}
-
-func (c *ConfirmRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
-	return c.updateConfirmable(ctx, email, confirmable)
-}
-
 func NewConfirm(users confirmRepository) Confirm {
 	return func(ctx context.Context, req ConfirmRequest) (*ConfirmResponse, error) {
 		token := strings.TrimSpace(req.Token)
@@ -69,4 +56,17 @@ func NewConfirm(users confirmRepository) Confirm {
 			Success: success,
 		}, nil
 	}
+}
+
+type ConfirmRepository struct {
+	WithConfirmationTokenFunc WithConfirmationToken
+	UpdateConfirmableFunc     UpdateConfirmable
+}
+
+func (c *ConfirmRepository) WithConfirmationToken(ctx context.Context, token string) (*User, error) {
+	return c.WithConfirmationTokenFunc(ctx, token)
+}
+
+func (c *ConfirmRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
+	return c.UpdateConfirmableFunc(ctx, email, confirmable)
 }

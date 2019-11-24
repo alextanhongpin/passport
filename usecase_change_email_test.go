@@ -27,7 +27,7 @@ func TestChangeEmailValidation(t *testing.T) {
 			assert := assert.New(t)
 			res, err := changeEmail(&mockChangeEmailRepository{}, tt.userID, tt.email)
 			assert.Nil(res)
-			assert.Equal(err, tt.err)
+			assert.Equal(tt.err, err)
 		})
 	}
 }
@@ -39,7 +39,7 @@ func TestChangeEmailExists(t *testing.T) {
 	}
 	res, err := changeEmail(repo, "123456", "john.doe@mail.com")
 	assert.Nil(res)
-	assert.Equal(err, passport.ErrEmailExists)
+	assert.Equal(passport.ErrEmailExists, err)
 }
 
 func TestChangeEmailNewUser(t *testing.T) {
@@ -49,7 +49,7 @@ func TestChangeEmailNewUser(t *testing.T) {
 	}
 	res, err := changeEmail(repo, "123456", "john.doe@mail.com")
 	assert.Nil(res)
-	assert.Equal(err, passport.ErrUserNotFound)
+	assert.Equal(passport.ErrUserNotFound, err)
 }
 
 func TestChangeEmailSuccess(t *testing.T) {
