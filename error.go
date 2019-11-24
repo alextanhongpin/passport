@@ -11,6 +11,7 @@ var (
 	ErrPasswordRequired         = errors.New("password required")
 	ErrPasswordUsed             = errors.New("password cannot be reused")
 	ErrPasswordTooShort         = errors.New("password too short")
+	ErrPasswordDoNotMatch       = errors.New("password do not match")
 	ErrPasswordChangeNotAllowed = errors.New("password change not allowed")
 	ErrEmailOrPasswordInvalid   = errors.New("email or password is invalid")
 	ErrTokenRequired            = errors.New("token is required")
