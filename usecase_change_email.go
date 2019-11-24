@@ -30,21 +30,21 @@ type (
 )
 
 type ChangeEmailRepository struct {
-	hasEmail          HasEmail
-	find              Find
-	updateConfirmable UpdateConfirmable
+	HasEmailFunc          HasEmail
+	FindFunc              Find
+	UpdateConfirmableFunc UpdateConfirmable
 }
 
 func (c *ChangeEmailRepository) HasEmail(ctx context.Context, email string) (bool, error) {
-	return c.hasEmail(ctx, email)
+	return c.HasEmailFunc(ctx, email)
 }
 
 func (c *ChangeEmailRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
-	return c.updateConfirmable(ctx, email, confirmable)
+	return c.UpdateConfirmableFunc(ctx, email, confirmable)
 }
 
 func (c *ChangeEmailRepository) Find(ctx context.Context, id string) (*User, error) {
-	return c.find(ctx, id)
+	return c.FindFunc(ctx, id)
 }
 
 func NewChangeEmail(users changeEmailRepository) ChangeEmail {
@@ -56,6 +56,9 @@ func NewChangeEmail(users changeEmailRepository) ChangeEmail {
 
 		if err := validateEmail(email); err != nil {
 			return nil, err
+		}
+		if userID == "" {
+			return nil, ErrUserIDRequired
 		}
 
 		exists, err := users.HasEmail(ctx, email)
