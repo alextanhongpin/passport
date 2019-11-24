@@ -39,10 +39,15 @@ func TestChangePasswordValidation(t *testing.T) {
 
 func TestChangePasswordNewUser(t *testing.T) {
 	assert := assert.New(t)
+	var (
+		userID          = "user_1"
+		password        = "123456"
+		confirmPassword = "123456"
+	)
 	repo := &mockChangePasswordRepository{
 		findError: sql.ErrNoRows,
 	}
-	res, err := changePassword(repo, "user_1", "123456", "123456")
+	res, err := changePassword(repo, userID, password, confirmPassword)
 	assert.Nil(res)
 	assert.Equal(passport.ErrUserNotFound, err)
 }
@@ -50,7 +55,9 @@ func TestChangePasswordNewUser(t *testing.T) {
 func TestChangePasswordSamePassword(t *testing.T) {
 	assert := assert.New(t)
 	var (
-		password = "123456"
+		userID          = "user_1"
+		password        = "123456"
+		confirmPassword = "123456"
 	)
 	encryptedPassword, err := passwd.Encrypt(password)
 	assert.Nil(err)
@@ -60,7 +67,7 @@ func TestChangePasswordSamePassword(t *testing.T) {
 			EncryptedPassword: encryptedPassword,
 		},
 	}
-	res, err := changePassword(repo, "user_1", password, password)
+	res, err := changePassword(repo, userID, password, confirmPassword)
 	assert.Nil(res)
 	assert.Equal(passport.ErrPasswordUsed, err)
 }
@@ -68,20 +75,22 @@ func TestChangePasswordSamePassword(t *testing.T) {
 func TestChangePasswordSuccess(t *testing.T) {
 	assert := assert.New(t)
 	var (
-		oldPassword = "123456"
-		newPassword = "654321"
+		userID          = "user_1"
+		oldPassword     = "123456"
+		newPassword     = "654321"
+		confirmPassword = "654321"
 	)
 	encryptedPassword, err := passwd.Encrypt(oldPassword)
 	assert.Nil(err)
 
 	repo := &mockChangePasswordRepository{
 		findResponse: &passport.User{
-			ID:                "xyz",
+			ID:                userID,
 			EncryptedPassword: encryptedPassword,
 		},
 		updatePasswordResponse: true,
 	}
-	res, err := changePassword(repo, "user_1", newPassword, newPassword)
+	res, err := changePassword(repo, userID, newPassword, confirmPassword)
 	assert.Nil(nil)
 	assert.True(res.Success)
 }

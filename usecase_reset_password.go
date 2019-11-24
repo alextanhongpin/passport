@@ -111,19 +111,19 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 }
 
 type ResetPasswordRepository struct {
-	withResetPasswordToken WithResetPasswordToken
-	updatePassword         UpdatePassword
-	updateRecoverable      UpdateRecoverable
+	WithResetPasswordTokenFunc WithResetPasswordToken
+	UpdatePasswordFunc         UpdatePassword
+	UpdateRecoverableFunc      UpdateRecoverable
 }
 
 func (r *ResetPasswordRepository) WithResetPasswordToken(ctx context.Context, token string) (*User, error) {
-	return r.withResetPasswordToken(ctx, token)
+	return r.WithResetPasswordTokenFunc(ctx, token)
 }
 
 func (r *ResetPasswordRepository) UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error) {
-	return r.updatePassword(ctx, userID, encryptedPassword)
+	return r.UpdatePasswordFunc(ctx, userID, encryptedPassword)
 }
 
 func (r *ResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
-	return r.updateRecoverable(ctx, email, recoverable)
+	return r.UpdateRecoverableFunc(ctx, email, recoverable)
 }

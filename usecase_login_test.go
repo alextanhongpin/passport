@@ -36,9 +36,12 @@ func TestLoginValidation(t *testing.T) {
 
 func TestLoginNewUser(t *testing.T) {
 	assert := assert.New(t)
-
+	var (
+		email    = "john.doe@mail.com"
+		password = "123456"
+	)
 	repo := &mockLoginRepository{Err: sql.ErrNoRows}
-	res, err := login(repo, "john.doe@mail.com", "123456")
+	res, err := login(repo, email, password)
 	assert.Nil(res)
 	assert.Equal(passport.ErrEmailNotFound, err)
 }

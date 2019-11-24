@@ -25,19 +25,6 @@ type sendConfirmationRepository interface {
 	UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
 }
 
-type SendConfirmationRepository struct {
-	withEmail         WithEmail
-	updateConfirmable UpdateConfirmable
-}
-
-func (s *SendConfirmationRepository) WithEmail(ctx context.Context, email string) (*User, error) {
-	return s.withEmail(ctx, email)
-}
-
-func (s *SendConfirmationRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
-	return s.updateConfirmable(ctx, email, confirmable)
-}
-
 func NewSendConfirmation(users sendConfirmationRepository) SendConfirmation {
 	return func(ctx context.Context, req SendConfirmationRequest) (*SendConfirmationResponse, error) {
 		var (
@@ -71,4 +58,17 @@ func NewSendConfirmation(users sendConfirmationRepository) SendConfirmation {
 			Token:   confirmable.ConfirmationToken,
 		}, nil
 	}
+}
+
+type SendConfirmationRepository struct {
+	WithEmailFunc         WithEmail
+	UpdateConfirmableFunc UpdateConfirmable
+}
+
+func (s *SendConfirmationRepository) WithEmail(ctx context.Context, email string) (*User, error) {
+	return s.WithEmailFunc(ctx, email)
+}
+
+func (s *SendConfirmationRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
+	return s.UpdateConfirmableFunc(ctx, email, confirmable)
 }

@@ -20,60 +20,72 @@ func TestConfirmValidation(t *testing.T) {
 
 func TestConfirmNewToken(t *testing.T) {
 	assert := assert.New(t)
+	var (
+		token = "xyz"
+	)
 	res, err := confirm(&mockConfirmRepository{
 		withConfirmationTokenError: sql.ErrNoRows,
-	}, "xyz")
+	}, token)
 	assert.Nil(res)
 	assert.Equal(err, passport.ErrTokenNotFound)
 }
 
 func TestConfirmTokenExpired(t *testing.T) {
 	assert := assert.New(t)
+	var (
+		token = "xyz"
+	)
 	res, err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
 			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
 				ConfirmationSentAt: time.Now().Add(-25 * time.Hour),
-				ConfirmationToken:  "",
+				ConfirmationToken:  token,
 				UnconfirmedEmail:   "john.doe@mail.com",
 			},
 		},
-	}, "xyz")
+	}, token)
 	assert.Nil(res)
 	assert.Equal(passport.ErrTokenExpired, err)
 }
 
 func TestConfirmTokenEmailVerified(t *testing.T) {
 	assert := assert.New(t)
+	var (
+		token = "xyz"
+	)
 	res, err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
 			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
 				ConfirmationSentAt: time.Now().Add(-23 * time.Hour),
 				ConfirmedAt:        time.Now(),
-				ConfirmationToken:  "",
+				ConfirmationToken:  token,
 				UnconfirmedEmail:   "",
 			},
 		},
-	}, "xyz")
+	}, token)
 	assert.Nil(res)
 	assert.Equal(passport.ErrEmailVerified, err)
 }
 
 func TestConfirmEmailSuccess(t *testing.T) {
 	assert := assert.New(t)
+	var (
+		token = "xyz"
+	)
 	res, err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
 			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
 				ConfirmationSentAt: time.Now().Add(-23 * time.Hour),
 				ConfirmedAt:        time.Now(),
-				ConfirmationToken:  "",
+				ConfirmationToken:  token,
 				UnconfirmedEmail:   "john.doe@mail.com",
 			},
 		},
 		updateConfirmableResponse: true,
-	}, "xyz")
+	}, token)
 	assert.Nil(err)
 	assert.True(res.Success)
 }

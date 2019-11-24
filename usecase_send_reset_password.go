@@ -24,11 +24,11 @@ type sendResetPasswordRepository interface {
 }
 
 type SendResetPasswordRepository struct {
-	updateRecoverable UpdateRecoverable
+	UpdateRecoverableFunc UpdateRecoverable
 }
 
 func (s *SendResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
-	return s.updateRecoverable(ctx, email, recoverable)
+	return s.UpdateRecoverableFunc(ctx, email, recoverable)
 }
 
 func NewSendResetPassword(users sendResetPasswordRepository) SendResetPassword {

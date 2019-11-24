@@ -35,29 +35,41 @@ func TestChangeEmailValidation(t *testing.T) {
 
 func TestChangeEmailExists(t *testing.T) {
 	assert := assert.New(t)
+	var (
+		userID = "123456"
+		email  = "john.doe@mail.com"
+	)
 	repo := &mockChangeEmailRepository{
 		hasEmailResponse: true,
 	}
-	res, err := changeEmail(repo, "123456", "john.doe@mail.com")
+	res, err := changeEmail(repo, userID, email)
 	assert.Nil(res)
 	assert.Equal(passport.ErrEmailExists, err)
 }
 
 func TestChangeEmailNewUser(t *testing.T) {
 	assert := assert.New(t)
+	var (
+		userID = "123456"
+		email  = "john.doe@mail.com"
+	)
 	repo := &mockChangeEmailRepository{
 		findError: sql.ErrNoRows,
 	}
-	res, err := changeEmail(repo, "123456", "john.doe@mail.com")
+	res, err := changeEmail(repo, userID, email)
 	assert.Nil(res)
 	assert.Equal(passport.ErrUserNotFound, err)
 }
 
 func TestChangeEmailSuccess(t *testing.T) {
 	assert := assert.New(t)
+	var (
+		userID = "123456"
+		email  = "john.doe@mail.com"
+	)
 	repo := &mockChangeEmailRepository{
 		findResponse: &passport.User{
-			Email: "john.doe@mail.com",
+			Email: email,
 			Confirmable: passport.Confirmable{
 				ConfirmationToken:  "xyz",
 				ConfirmationSentAt: time.Now(),
@@ -66,7 +78,7 @@ func TestChangeEmailSuccess(t *testing.T) {
 		},
 		updateConfirmableResponse: true,
 	}
-	res, err := changeEmail(repo, "123456", "john.doe@mail.com")
+	res, err := changeEmail(repo, userID, email)
 	assert.Nil(err)
 	assert.True(res.Success)
 	assert.True(res.Token != "")

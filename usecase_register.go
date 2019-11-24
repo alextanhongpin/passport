@@ -25,14 +25,6 @@ type registerRepository interface {
 	Create(ctx context.Context, email, password string) (*User, error)
 }
 
-type RegisterRepository struct {
-	CreateFunc Create
-}
-
-func (r *RegisterRepository) Create(ctx context.Context, email, password string) (*User, error) {
-	return r.CreateFunc(ctx, email, password)
-}
-
 func NewRegister(users registerRepository) Register {
 	return func(ctx context.Context, req RegisterRequest) (*RegisterResponse, error) {
 		var (
@@ -61,4 +53,12 @@ func NewRegister(users registerRepository) Register {
 			User: *user,
 		}, nil
 	}
+}
+
+type RegisterRepository struct {
+	CreateFunc Create
+}
+
+func (r *RegisterRepository) Create(ctx context.Context, email, password string) (*User, error) {
+	return r.CreateFunc(ctx, email, password)
 }
