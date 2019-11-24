@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/alextanhongpin/passport"
 	"github.com/stretchr/testify/assert"
@@ -49,6 +50,24 @@ func TestChangeEmailNewUser(t *testing.T) {
 	res, err := changeEmail(repo, "123456", "john.doe@mail.com")
 	assert.Nil(res)
 	assert.Equal(err, passport.ErrUserNotFound)
+}
+
+func TestChangeEmailSuccess(t *testing.T) {
+	assert := assert.New(t)
+	repo := &mockChangeEmailRepository{
+		findResponse: &passport.User{
+			Confirmable: passport.Confirmable{
+				ConfirmationToken:  "xyz",
+				ConfirmationSentAt: time.Now(),
+				UnconfirmedEmail:   "xyz@mail.com",
+			},
+		},
+		updateConfirmableResponse: true,
+	}
+	res, err := changeEmail(repo, "123456", "john.doe@mail.com")
+	assert.Nil(err)
+	assert.True(res.Success)
+	assert.True(res.Token != "")
 }
 
 type mockChangeEmailRepository struct {

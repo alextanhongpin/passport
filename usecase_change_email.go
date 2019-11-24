@@ -68,16 +68,13 @@ func NewChangeEmail(users changeEmailRepository) ChangeEmail {
 		if exists {
 			return nil, ErrEmailExists
 		}
+
 		user, err := users.Find(ctx, userID)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
 		if err != nil {
 			return nil, err
-		}
-
-		if !user.Confirmable.IsVerified() {
-			return nil, ErrConfirmationRequired
 		}
 
 		var confirmable = NewConfirmable(email)
