@@ -1,6 +1,10 @@
 package passport
 
-import "time"
+import (
+	"time"
+
+	uuid "github.com/satori/go.uuid"
+)
 
 const RecoverableTokenValidity = 1 * time.Hour
 
@@ -19,7 +23,7 @@ func NewRecoverable() Recoverable {
 		// Instead of using the Postgres UUID, we set it here.
 		// This allows us to change the implementation at the
 		// application level.
-		ResetPasswordToken:  uuid.Must(uuid.NewV4()),
+		ResetPasswordToken:  uuid.Must(uuid.NewV4()).String(),
 		ResetPasswordSentAt: time.Now(),
 		AllowPasswordChange: true,
 	}

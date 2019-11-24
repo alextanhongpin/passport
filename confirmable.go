@@ -1,6 +1,10 @@
 package passport
 
-import "time"
+import (
+	"time"
+
+	uuid "github.com/satori/go.uuid"
+)
 
 const ConfirmationTokenValidity = 24 * time.Hour
 
@@ -24,7 +28,7 @@ func (c Confirmable) IsVerified() bool {
 
 func NewConfirmable(email string) Confirmable {
 	return Confirmable{
-		ConfirmationToken:  uuid.Must(uuid.NewV4()),
+		ConfirmationToken:  uuid.Must(uuid.NewV4()).String(),
 		ConfirmationSentAt: time.Now(),
 		UnconfirmedEmail:   email,
 	}

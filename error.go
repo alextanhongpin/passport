@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrConfirmationRequired     = errors.New("confirmation required")
+	ErrUserNotFound             = errors.New("user not found")
 	ErrEmailNotFound            = errors.New("email not found")
 	ErrEmailInvalid             = errors.New("email invalid")
 	ErrEmailRequired            = errors.New("email required")

@@ -1,0 +1,72 @@
+package passport
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"strings"
+)
+
+type Confirm func(context.Context, ConfirmRequest) (*ConfirmResponse, error)
+
+type (
+	ConfirmRequest struct {
+		Token string `json:"token"`
+	}
+	ConfirmResponse struct {
+		Success bool `json:"success"`
+	}
+)
+
+type confirmRepository interface {
+	WithConfirmationToken(ctx context.Context, token string) (*User, error)
+	UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
+}
+
+type ConfirmRepository struct {
+	withConfirmationToken WithConfirmationToken
+	updateConfirmable     UpdateConfirmable
+}
+
+func (c *ConfirmRepository) WithConfirmationToken(ctx context.Context, token string) (*User, error) {
+	return c.withConfirmationToken(ctx, token)
+}
+
+func (c *ConfirmRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
+	return c.updateConfirmable(ctx, email, confirmable)
+}
+
+func NewConfirm(users confirmRepository) Confirm {
+	return func(ctx context.Context, req ConfirmRequest) (*ConfirmResponse, error) {
+		token := strings.TrimSpace(req.Token)
+		if token == "" {
+			return nil, ErrTokenRequired
+		}
+		user, err := users.WithConfirmationToken(ctx, token)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrTokenNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		if user.Confirmable.IsVerified() {
+			return nil, ErrEmailVerified
+		}
+
+		if !user.Confirmable.IsValid() {
+			return nil, ErrTokenExpired
+		}
+
+		// Reset confirmable.
+		var confirmable Confirmable
+		success, err := users.UpdateConfirmable(ctx, user.Email, confirmable)
+		if err != nil {
+			return nil, err
+		}
+
+		return &ConfirmResponse{
+			Success: success,
+		}, nil
+	}
+}
