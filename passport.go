@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/alextanhongpin/passwd"
@@ -35,13 +34,6 @@ func (p *Passport) Login(ctx context.Context, req LoginRequest) (*LoginResponse,
 		return nil, err
 	}
 
-	if !user.EmailVerified {
-		// TODO: ResendConfirmationEmail, either through:
-		// 1. callback (too coupled)
-		// 2. match errors and handle it yourself.
-		return nil, ErrConfirmationRequired
-	}
-
 	match, err := passwd.Compare(user.EncryptedPassword, password)
 	if err != nil {
 		return nil, err
@@ -49,6 +41,11 @@ func (p *Passport) Login(ctx context.Context, req LoginRequest) (*LoginResponse,
 	if !match {
 		return nil, ErrEmailOrPasswordInvalid
 	}
+
+	if !user.IsConfirmationRequired() {
+		return nil, ErrConfirmationRequired
+	}
+
 	return &LoginResponse{
 		User: user,
 	}, err
@@ -65,12 +62,12 @@ func (s *Passport) Register(ctx context.Context, req RegisterRequest) (*Register
 
 	encrypted, err := passwd.Encrypt(password)
 	if err != nil {
-		return nil, fmt.Errorf("encrypt password failed: %w", err)
+		return nil, err
 	}
 
 	user, err := p.users.Create(ctx, email, encrypted)
 	if err != nil {
-		return nil, fmt.Errorf("create user failed: %w", err)
+		return nil, err
 	}
 
 	return &RegisterResponse{
@@ -84,17 +81,8 @@ func (s *ServiceImpl) SendResetPassword(ctx context.Context, req SendResetPasswo
 		return nil, err
 	}
 
-	user, err := p.users.WithEmail(ctx, email)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrEmailNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	// This should replace the old token if multiple reset password is invoked.
 	recoverable := NewRecoverable()
-	success, err := p.users.UpdateRecoverable(ctx, user, recoverable)
+	success, err := p.users.UpdateRecoverable(ctx, email, recoverable)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrEmailNotFound
 	}
@@ -104,7 +92,8 @@ func (s *ServiceImpl) SendResetPassword(ctx context.Context, req SendResetPasswo
 
 	// Return enough data for us to send the email.
 	return &ResetPasswordResponse{
-		Token: recoverable.ResetPasswordToken,
+		Success: success,
+		Token:   recoverable.ResetPasswordToken,
 	}, nil
 }
 
@@ -115,14 +104,10 @@ func (s *ServiceImpl) ResetPassword(ctx context.Context, req ResetPasswordReques
 		confirmPassword = strings.TrimSpace(req.ConfirmPassword)
 	)
 	if token == "" {
-		return nil, ErrTokenInvalid
+		return nil, ErrTokenRequired
 	}
-	if password == "" || confirmPassword == "" {
-		return nil, ErrPasswordRequired
-	}
-	// Password must be equal.
-	if !passwd.ConstantTimeCompare(password, confirmPassword) {
-		return nil, ErrPasswordInvalid
+	if password != confirmPassword {
+		return nil, ErrPasswordDoNotMatch
 	}
 	if err := validatePassword(password); err != nil {
 		return nil, err
@@ -143,8 +128,8 @@ func (s *ServiceImpl) ResetPassword(ctx context.Context, req ResetPasswordReques
 	if !recoverable.AllowPasswordChange {
 		return nil, ErrPasswordChangeNotAllowed
 	}
-	// Email must be verified first. Not really...user might not verified
-	// their account for a long time.
+	// NOTE: Must email be verified first? Not really...user might not
+	// verified their account for a long time.
 	// if user.EmailVerified {
 	//         return nil, ErrConfirmationRequired
 	// }
@@ -159,16 +144,21 @@ func (s *ServiceImpl) ResetPassword(ctx context.Context, req ResetPasswordReques
 
 	encrypted, err := passwd.Encrypt(password)
 	if err != nil {
-		return nil, fmt.Errorf("encrypt password failed: %w", err)
-	}
-
-	success, err := p.users.UpdatePassword(ctx, user, encrypted)
-	if err != nil {
 		return nil, err
 	}
 
+	success, err := p.users.UpdatePassword(ctx, user.ID, encrypted)
+	if err != nil {
+		return nil, err
+	}
+	if !success {
+		return &ResetPasswordResponse{
+			Success: success,
+		}
+	}
+
 	var recoverable Recoverable
-	success, err := p.users.UpdateRecoverable(ctx, user, recoverable)
+	success, err := p.users.UpdateRecoverable(ctx, user.Email, recoverable)
 	if err != nil {
 		return nil, err
 	}
@@ -188,8 +178,6 @@ func (s *Passport) SendConfirmation(ctx context.Context, req SendConfirmationReq
 	}
 
 	user, err := p.users.WithEmail(ctx, email)
-	// NOTE: Should just fail silently - you should receive an email if
-	// your email exists.
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrEmailNotFound
 	}
@@ -198,14 +186,12 @@ func (s *Passport) SendConfirmation(ctx context.Context, req SendConfirmationReq
 	}
 
 	// Don't resend for users whose email is already confirmed.
-	if user.EmailVerified {
+	if user.Confirmable.IsVerified() {
 		return nil, ErrEmailVerified
 	}
 
 	confirmable := NewConfirmable(email)
-	// This will set email verified to false.
-	emailVerified := false
-	ok, err := p.users.UpdateConfirmable(ctx, user, confirmable, emailVerified)
+	ok, err := p.users.UpdateConfirmable(ctx, email, confirmable)
 	if err != nil {
 		return nil, err
 	}
@@ -229,17 +215,17 @@ func (s *Passport) Confirm(ctx context.Context, req ConfirmRequest) (*ConfirmRes
 		return nil, err
 	}
 
-	// Skip if verified.
-	if user.EmailVerified {
-		return nil, nil
+	if user.Confirmable.IsVerified() {
+		return nil, ErrEmailVerified
 	}
 
 	if !user.Confirmable.IsValid() {
 		return nil, ErrTokenExpired
 	}
-	emailVerified := true
+
+	// Reset confirmable.
 	var confirmable Confirmable
-	success, err := p.users.UpdateConfirmable(ctx, user, confirmable, emailVerified)
+	success, err := p.users.UpdateConfirmable(ctx, user.Email, confirmable)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +236,11 @@ func (s *Passport) Confirm(ctx context.Context, req ConfirmRequest) (*ConfirmRes
 }
 
 func (s *Passport) ChangeEmail(ctx context.Context, req ChangeEmailRequest) (*ChangeEmailResponse, error) {
-	email = strings.TrimSpace(req.Email)
+	var (
+		email  = strings.TrimSpace(req.Email)
+		userID = strings.TrimSpace(req.ContextUserID)
+	)
+
 	if err := validateEmail(email); err != nil {
 		return nil, err
 	}
@@ -262,16 +252,28 @@ func (s *Passport) ChangeEmail(ctx context.Context, req ChangeEmailRequest) (*Ch
 	if exists {
 		return nil, ErrEmailExists
 	}
+	user, err := p.users.Find(userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, UserNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
 
-	confirmable := NewConfirmable(email)
-	ok, err := p.users.UpdateConfirmable(ctx, user, confirmable)
+	if !user.Confirmable.IsVerified() {
+		return nil, ErrConfirmationRequired
+	}
+
+	var confirmable = NewConfirmable(email)
+	success, err := p.users.UpdateConfirmable(ctx, user.Email, confirmable)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return the confirmable in order to send the email.
 	return &SendConfirmationResponse{
-		Token: confirmable.ConfirmationToken,
+		Success: success,
+		Token:   confirmable.ConfirmationToken,
 	}, nil
 }
 
@@ -281,9 +283,6 @@ func (s *Passport) ChangePassword(ctx context.Context, req ChangePasswordRequest
 		password        = strings.TrimSpace(req.Password)
 		confirmPassword = strings.TrimSpace(req.ConfirmPassword)
 	)
-	if password == "" || confirmPassword == "" {
-		return nil, ErrPasswordRequired
-	}
 	if password != confirmPassword {
 		return nil, ErrPasswordDoNotMatch
 	}
@@ -309,10 +308,10 @@ func (s *Passport) ChangePassword(ctx context.Context, req ChangePasswordRequest
 
 	encrypted, err := passwd.Encrypt(password)
 	if err != nil {
-		return nil, fmt.Errorf("encrypt password failed: %w", err)
+		return nil, err
 	}
 
-	success, err := p.users.UpdatePassword(ctx, user, encrypted)
+	success, err := p.users.UpdatePassword(ctx, user.ID, encrypted)
 	if err != nil {
 		return nil, err
 	}

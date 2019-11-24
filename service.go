@@ -75,7 +75,9 @@ type (
 		ConfirmPassword string
 	}
 	ResetPasswordResponse struct {
-		User User
+		// Indicator on whether to send or not.
+		Success bool
+		User    User
 	}
 )
 
@@ -84,7 +86,9 @@ type (
 		Email string
 	}
 	SendConfirmationResponse struct {
-		Token string
+		// Indicator on whether to send or not.
+		Success bool
+		Token   string
 	}
 )
 

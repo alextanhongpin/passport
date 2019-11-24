@@ -15,7 +15,7 @@ func validateEmail(email string) error {
 		return ErrEmailRequired
 	}
 	if !IsEmailValid(email) {
-		return ErrInvalidEmail
+		return ErrEmailInvalid
 	}
 	return nil
 }

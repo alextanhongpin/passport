@@ -4,9 +4,9 @@ import "context"
 
 type Repository interface {
 	Create(ctx context.Context, email, password string) (*User, error)
-	UpdateRecoverable(context.Context, User, Recoverable) (bool, error)
-	UpdateConfirmable(context.Context, User, Confirmable) (bool, error)
-	UpdatePassword(ctx context.Context, user User, encryptedPassword string) (bool, error)
+	UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
+	UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
+	UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error)
 	WithEmail(ctx context.Context, email string) (*User, error)
 	WithResetPasswordToken(ctx context.Context, token string) (*User, error)
 	WithConfirmationToken(ctx context.Context, token string) (*User, error)
