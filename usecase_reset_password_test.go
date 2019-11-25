@@ -46,7 +46,7 @@ func TestResetPasswordNewEmail(t *testing.T) {
 		withResetPasswordError: sql.ErrNoRows,
 	}, token, password, confirmPassword)
 	assert.Nil(res)
-	assert.Equal(passport.ErrEmailNotFound, err)
+	assert.Equal(passport.ErrTokenNotFound, err)
 }
 
 func TestResetPasswordTokenExpired(t *testing.T) {

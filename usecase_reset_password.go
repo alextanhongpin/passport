@@ -49,7 +49,7 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 
 		user, err := users.WithResetPasswordToken(ctx, token)
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrEmailNotFound
+			return nil, ErrTokenNotFound
 		}
 		if err != nil {
 			return nil, err
