@@ -19,18 +19,6 @@ type (
 	}
 )
 
-type sendResetPasswordRepository interface {
-	UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
-}
-
-type SendResetPasswordRepository struct {
-	UpdateRecoverableFunc UpdateRecoverable
-}
-
-func (s *SendResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
-	return s.UpdateRecoverableFunc(ctx, email, recoverable)
-}
-
 func NewSendResetPassword(users sendResetPasswordRepository) SendResetPassword {
 	return func(ctx context.Context, req SendResetPasswordRequest) (*SendResetPasswordResponse, error) {
 		email := strings.TrimSpace(req.Email)
@@ -53,5 +41,16 @@ func NewSendResetPassword(users sendResetPasswordRepository) SendResetPassword {
 			Token:   recoverable.ResetPasswordToken,
 		}, nil
 	}
+}
 
+type sendResetPasswordRepository interface {
+	UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
+}
+
+type SendResetPasswordRepository struct {
+	UpdateRecoverableFunc UpdateRecoverable
+}
+
+func (s *SendResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
+	return s.UpdateRecoverableFunc(ctx, email, recoverable)
 }
