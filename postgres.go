@@ -57,13 +57,18 @@ func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recovera
 		WHERE 	email = $4
 	`
 
+	var resetPasswordToken *string
+	if recoverable.ResetPasswordToken != "" {
+		resetPasswordToken = &recoverable.ResetPasswordToken
+	}
+
 	var resetPasswordSentAt *time.Time
 	if !recoverable.ResetPasswordSentAt.IsZero() {
 		resetPasswordSentAt = &recoverable.ResetPasswordSentAt
 		log.Println(resetPasswordSentAt)
 	}
 	res, err := p.db.Exec(stmt,
-		recoverable.ResetPasswordToken,
+		resetPasswordToken,
 		resetPasswordSentAt,
 		recoverable.AllowPasswordChange,
 		email,
@@ -119,12 +124,16 @@ func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirma
 		WHERE 	email = $5
 	`
 
+	var confirmationToken *string
+	if confirmable.ConfirmationToken != "" {
+		confirmationToken = &confirmable.ConfirmationToken
+	}
 	var confirmationTokenSentAt *time.Time
 	if !confirmable.ConfirmationSentAt.IsZero() {
 		confirmationTokenSentAt = &confirmable.ConfirmationSentAt
 	}
 	res, err := p.db.Exec(stmt,
-		confirmable.ConfirmationToken,
+		confirmationToken,
 		confirmationTokenSentAt,
 		confirmable.ConfirmedAt,
 		confirmable.UnconfirmedEmail,

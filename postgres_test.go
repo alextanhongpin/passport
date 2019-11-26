@@ -7,7 +7,6 @@ import (
 
 	"github.com/alextanhongpin/passport"
 	"github.com/alextanhongpin/passport/examples/database"
-	"github.com/khaiql/dbcleaner"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -15,8 +14,6 @@ import (
 func TestMain(m *testing.M) {
 	database.TestMain(m)
 }
-
-var Cleaner = dbcleaner.New()
 
 type TestPostgresSuite struct {
 	suite.Suite
@@ -28,17 +25,20 @@ type TestPostgresSuite struct {
 func (suite *TestPostgresSuite) SetupSuite() {
 	suite.db = database.DB()
 	suite.repository = passport.NewPostgres(suite.db)
-
 }
 
 func (suite *TestPostgresSuite) SetupTest() {
 	// Create a mock user.
-	var err error
-	suite.user, err = suite.repository.Create(context.TODO(), "john.doe@mail.com", "xyz")
+	var (
+		email    = "john.doe@mail.com"
+		password = "xyz"
+		err      error
+	)
+	suite.user, err = suite.repository.Create(context.TODO(), email, password)
 	suite.Nil(err)
 	suite.True(len(suite.user.ID) > 0)
-	// pg := engine.NewPostgresEngine(database.TestConfig().String())
-	// Cleaner.SetEngine(pg)
+
+	suite.user.Email = email
 }
 
 func (suite *TestPostgresSuite) TearDownTest() {
@@ -48,7 +48,7 @@ func (suite *TestPostgresSuite) TearDownTest() {
 
 func (suite *TestPostgresSuite) TestCreate() {
 	var (
-		email    = "jane.doe@mail.com"
+		email    = "jane@mail.com"
 		password = "xyz"
 	)
 	user, err := suite.repository.Create(context.TODO(), email, password)
@@ -58,28 +58,25 @@ func (suite *TestPostgresSuite) TestCreate() {
 }
 
 func (suite *TestPostgresSuite) TestWithEmailNoRows() {
-	user, err := suite.repository.WithEmail(context.TODO(), "jessie.doe@mail.com")
+	user, err := suite.repository.WithEmail(context.TODO(), "jane@mail.com")
 	suite.Nil(user)
 	suite.Equal(sql.ErrNoRows, err)
 }
 
 func (suite *TestPostgresSuite) TestWithEmailSuccess() {
-	var (
-		email = "john.doe@mail.com"
-	)
-	user, err := suite.repository.WithEmail(context.TODO(), email)
+	user, err := suite.repository.WithEmail(context.TODO(), suite.user.Email)
 	suite.Nil(err)
-	suite.Equal(email, user.Email)
+	suite.Equal(suite.user.Email, user.Email)
 }
 
 func (suite *TestPostgresSuite) TestUpdateRecoverableNoRows() {
-	updated, err := suite.repository.UpdateRecoverable(context.TODO(), "abc.doe@mail.com", passport.Recoverable{})
+	updated, err := suite.repository.UpdateRecoverable(context.TODO(), "jane@mail.com", passport.Recoverable{})
 	suite.False(updated)
 	suite.Nil(err)
 }
 
 func (suite *TestPostgresSuite) TestUpdateRecoverableSuccess() {
-	updated, err := suite.repository.UpdateRecoverable(context.TODO(), "john.doe@mail.com", passport.Recoverable{
+	updated, err := suite.repository.UpdateRecoverable(context.TODO(), suite.user.Email, passport.Recoverable{
 		ResetPasswordToken:  "token_1",
 		AllowPasswordChange: true,
 	})
@@ -102,7 +99,7 @@ func (suite *TestPostgresSuite) TestUpdatePasswordSuccess() {
 func (suite *TestPostgresSuite) TestUpdateConfirmableSuccess() {
 	updated, err := suite.repository.UpdateConfirmable(
 		context.TODO(),
-		"john.doe@mail.com",
+		suite.user.Email,
 		passport.Confirmable{},
 	)
 	suite.Nil(err)
@@ -116,7 +113,7 @@ func (suite *TestPostgresSuite) TestWithConfirmationTokenNoRows() {
 }
 
 func (suite *TestPostgresSuite) TestHasEmailSuccess() {
-	exists, err := suite.repository.HasEmail(context.TODO(), "john.doe@mail.com")
+	exists, err := suite.repository.HasEmail(context.TODO(), suite.user.Email)
 	suite.Nil(err)
 	suite.True(exists)
 }
