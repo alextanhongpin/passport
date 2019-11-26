@@ -12,6 +12,7 @@ const (
 	ConfirmationPeriodValidity = 30 * 24 * time.Hour
 )
 
+// User represents the authenticatable Entity.
 type User struct {
 	ID                string
 	CreatedAt         time.Time

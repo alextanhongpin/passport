@@ -6,10 +6,12 @@ import (
 	"time"
 )
 
+// Postgres represents an implementation of the repository for User.
 type Postgres struct {
 	db *sql.DB
 }
 
+// NewPostgres returns a new pointer to Postgres struct.
 func NewPostgres(db *sql.DB) *Postgres {
 	return &Postgres{db}
 }

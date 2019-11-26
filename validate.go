@@ -6,6 +6,7 @@ var emailRegexPattern = "^(?:(?:(?:(?:[a-zA-Z]|\\d|[!#\\$%&'\\*\\+\\-\\/=\\?\\^_
 
 var emailRegex = regexp.MustCompile(emailRegexPattern)
 
+// IsEmailValid checks if an email is valid.
 func IsEmailValid(email string) bool {
 	return emailRegex.MatchString(email)
 }

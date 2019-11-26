@@ -8,16 +8,19 @@ import (
 
 const RecoverableTokenValidity = 1 * time.Hour
 
+// Recoverable holds the data to reset the User's password.
 type Recoverable struct {
 	ResetPasswordToken  string
 	ResetPasswordSentAt time.Time
 	AllowPasswordChange bool
 }
 
+// IsValid checks if the reset password token is within the validity period.
 func (r Recoverable) IsValid() bool {
 	return time.Since(r.ResetPasswordSentAt) < RecoverableTokenValidity
 }
 
+// NewRecoverable returns a new Recoverable.
 func NewRecoverable() Recoverable {
 	return Recoverable{
 		// Instead of using the Postgres UUID, we set it here.
