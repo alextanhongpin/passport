@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/alextanhongpin/passport"
 	"github.com/alextanhongpin/passwd"
@@ -60,6 +61,9 @@ func TestLoginExistingUser(t *testing.T) {
 		User: &passport.User{
 			Email:             email,
 			EncryptedPassword: encrypted,
+			Confirmable: passport.Confirmable{
+				ConfirmedAt: time.Now(),
+			},
 		},
 		Err: nil,
 	}

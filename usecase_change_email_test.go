@@ -109,8 +109,8 @@ func changeEmail(repo *mockChangeEmailRepository, userID, email string) (*passpo
 	return passport.NewChangeEmail(repo)(
 		context.TODO(),
 		passport.ChangeEmailRequest{
-			ContextUserID: userID,
-			Email:         email,
+			UserID: userID,
+			Email:  email,
 		},
 	)
 }

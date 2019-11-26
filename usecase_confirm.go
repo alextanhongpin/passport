@@ -55,7 +55,7 @@ func NewConfirm(users confirmRepository) Confirm {
 
 		// Reset confirmable.
 		var confirmable Confirmable
-		success, err := users.UpdateConfirmable(ctx, user.Email, confirmable)
+		success, err := users.UpdateConfirmable(ctx, email, confirmable)
 		if err != nil {
 			return nil, err
 		}

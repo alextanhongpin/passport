@@ -3,7 +3,6 @@ package passport
 import (
 	"context"
 	"database/sql"
-	"log"
 	"time"
 )
 
@@ -36,9 +35,9 @@ func (p *Postgres) WithEmail(ctx context.Context, email string) (*User, error) {
 
 func (p *Postgres) Create(ctx context.Context, email, encryptedPassword string) (*User, error) {
 	stmt := `
-		INSERT INTO 
-			login (email, encrypted_password)
-		VALUES 	($1, $2)
+		INSERT INTO login 
+			(email, encrypted_password, unconfirmed_email)
+		VALUES 	($1, $2, $1)
 		RETURNING id
 	`
 	var u User
@@ -65,7 +64,6 @@ func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recovera
 	var resetPasswordSentAt *time.Time
 	if !recoverable.ResetPasswordSentAt.IsZero() {
 		resetPasswordSentAt = &recoverable.ResetPasswordSentAt
-		log.Println(resetPasswordSentAt)
 	}
 	res, err := p.db.Exec(stmt,
 		resetPasswordToken,
@@ -116,10 +114,10 @@ func (p *Postgres) UpdatePassword(ctx context.Context, userID string, encryptedP
 func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
 	stmt := `
 		UPDATE 	login
-		SET 	email = unconfirmed_email,
+		SET 	email = COALESCE(NULLIF($4, ''), email),
 			confirmation_token = $1,
 			confirmation_sent_at = $2,
-			confirmed_at = COALESCE($3, confirmed_at),
+			confirmed_at = COALESCE($3, now()),
 			unconfirmed_email = $4
 		WHERE 	email = $5
 	`
@@ -132,10 +130,14 @@ func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirma
 	if !confirmable.ConfirmationSentAt.IsZero() {
 		confirmationTokenSentAt = &confirmable.ConfirmationSentAt
 	}
+	var confirmedAt *time.Time
+	if !confirmable.ConfirmedAt.IsZero() {
+		confirmedAt = &confirmable.ConfirmedAt
+	}
 	res, err := p.db.Exec(stmt,
 		confirmationToken,
 		confirmationTokenSentAt,
-		confirmable.ConfirmedAt,
+		confirmedAt,
 		confirmable.UnconfirmedEmail,
 		email,
 	)

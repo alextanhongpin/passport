@@ -13,7 +13,7 @@ type ChangePassword func(context.Context, ChangePasswordRequest) (*ChangePasswor
 
 type (
 	ChangePasswordRequest struct {
-		ContextUserID   string
+		UserID          string
 		Password        string
 		ConfirmPassword string
 	}
@@ -43,7 +43,7 @@ func (c *ChangePasswordRepository) UpdatePassword(ctx context.Context, userID, e
 func NewChangePassword(users changePasswordRepository) ChangePassword {
 	return func(ctx context.Context, req ChangePasswordRequest) (*ChangePasswordResponse, error) {
 		var (
-			userID          = strings.TrimSpace(req.ContextUserID)
+			userID          = strings.TrimSpace(req.UserID)
 			password        = strings.TrimSpace(req.Password)
 			confirmPassword = strings.TrimSpace(req.ConfirmPassword)
 		)

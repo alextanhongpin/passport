@@ -114,7 +114,7 @@ func changePassword(repo *mockChangePasswordRepository, userID, password, confir
 	return passport.NewChangePassword(repo)(
 		context.TODO(),
 		passport.ChangePasswordRequest{
-			ContextUserID:   userID,
+			UserID:          userID,
 			Password:        password,
 			ConfirmPassword: confirmPassword,
 		},

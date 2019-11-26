@@ -1,6 +1,8 @@
 package passport
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	// ConfirmationPeriodValidity represents the duration the user is
@@ -24,15 +26,16 @@ type User struct {
 
 	// Allow account information (client ip, user agent, sign in count) to
 	// be tracked.
-	Trackable
+	// Trackable
 
 	// Allows additionable information to be added to the user struct.
 	Extra Extra
 }
 
 func (u User) IsConfirmationRequired() bool {
-	if u.Confirmable.IsVerified() {
-		return false
-	}
-	return time.Since(u.CreatedAt) > ConfirmationPeriodValidity
+	return !u.Confirmable.IsVerified()
+	// if u.Confirmable.IsVerified() {
+	//         return false
+	// }
+	// return time.Since(u.CreatedAt) > ConfirmationPeriodValidity
 }

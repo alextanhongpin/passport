@@ -128,3 +128,132 @@ func (suite *TestPostgresSuite) TestFind() {
 func TestPostgresTestSuite(t *testing.T) {
 	suite.Run(t, new(TestPostgresSuite))
 }
+
+// NEW
+
+type TestAuthenticateSuite struct {
+	suite.Suite
+	db               *sql.DB
+	repository       *passport.Postgres
+	id               string
+	confirm          passport.Confirm
+	login            passport.Login
+	register         passport.Register
+	sendConfirmation passport.SendConfirmation
+}
+
+func (suite *TestAuthenticateSuite) SetupSuite() {
+	suite.db = database.DB()
+	suite.repository = passport.NewPostgres(suite.db)
+	suite.confirm = passport.NewConfirm(suite.repository)
+	suite.login = passport.NewLogin(suite.repository)
+	suite.register = passport.NewRegister(suite.repository)
+	suite.sendConfirmation = passport.NewSendConfirmation(suite.repository)
+}
+
+func (suite *TestAuthenticateSuite) SetupTest() {
+	// Clear db before each tests.
+	_, err := suite.db.Exec(`TRUNCATE TABLE login`)
+	suite.Nil(err)
+
+	req := passport.RegisterRequest{
+		Email:    "john.doe@mail.com",
+		Password: "123456",
+	}
+	res, err := suite.register(context.TODO(), req)
+	suite.Nil(err)
+	suite.NotNil(res)
+	suite.True(len(res.User.ID) > 0)
+	suite.id = res.User.ID
+}
+
+func (suite *TestAuthenticateSuite) TestLoginNewUser() {
+	res, err := suite.login(context.TODO(), passport.LoginRequest{
+		Email:    "jane.doe@mail.com",
+		Password: "124356",
+	})
+	suite.Nil(res)
+	suite.Equal(passport.ErrEmailNotFound, err)
+}
+
+func (suite *TestAuthenticateSuite) TestRegisterNewUser() {
+	res, err := suite.register(context.TODO(), passport.RegisterRequest{
+		Email:    "jane.doe@mail.com",
+		Password: "124356",
+	})
+	suite.Nil(err)
+	suite.NotNil(res)
+	suite.True(len(res.User.ID) > 0)
+}
+
+func (suite *TestAuthenticateSuite) TestRegisterExistingUser() {
+	req := passport.RegisterRequest{
+		Email:    "john.doe@mail.com",
+		Password: "124356",
+	}
+	res, err := suite.register(context.TODO(), req)
+	suite.Nil(res)
+	suite.NotNil(err)
+}
+
+func (suite *TestAuthenticateSuite) TestLoginRegisteredUserUnconfirmed() {
+	res, err := suite.login(context.TODO(), passport.LoginRequest{
+		Email:    "john.doe@mail.com",
+		Password: "123456",
+	})
+	suite.Nil(res)
+	suite.NotNil(err)
+	suite.Equal(passport.ErrConfirmationRequired, err)
+}
+
+func (suite *TestAuthenticateSuite) TestLoginRegisteredUserConfirmed() {
+	sendConfirmationRes, err := suite.sendConfirmation(context.TODO(), passport.SendConfirmationRequest{
+		Email: "john.doe@mail.com",
+	})
+	suite.Nil(err)
+	suite.True(sendConfirmationRes.Success)
+	suite.True(len(sendConfirmationRes.Token) > 0)
+
+	confirmRes, err := suite.confirm(context.TODO(), passport.ConfirmRequest{
+		Token: sendConfirmationRes.Token,
+	})
+	suite.Nil(err)
+	suite.True(confirmRes.Success)
+	// user, err := suite.repository.Find(context.TODO(), suite.id)
+	// suite.Nil(err)
+
+	loginRes, err := suite.login(context.TODO(), passport.LoginRequest{
+		Email:    "john.doe@mail.com",
+		Password: "123456",
+	})
+	suite.Nil(err)
+	suite.NotNil(loginRes)
+	suite.Equal("john.doe@mail.com", loginRes.User.Email)
+}
+
+func (suite *TestAuthenticateSuite) TestLoginWrongPassword() {
+	res, err := suite.login(context.TODO(), passport.LoginRequest{
+		Email:    "john.doe@mail.com",
+		Password: "654321",
+	})
+	suite.Nil(res)
+	suite.NotNil(err)
+	suite.Equal(passport.ErrEmailOrPasswordInvalid, err)
+}
+
+func TestAuthenticateTestSuite(t *testing.T) {
+	suite.Run(t, new(TestAuthenticateSuite))
+}
+
+// NEW
+
+// type TestPasswordSuite struct {
+//         suite.Suite
+//         changePassword passport.ChangePassword
+//         sendResetPassword passport.SendResetPassword
+//         resetPassword passport.ResetPassport
+// }
+//
+// func (suite *TestPasswordSuite) TestChangePassword() {
+//
+// }

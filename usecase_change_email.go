@@ -11,8 +11,8 @@ type ChangeEmail func(context.Context, ChangeEmailRequest) (*ChangeEmailResponse
 
 type (
 	ChangeEmailRequest struct {
-		ContextUserID string
-		Email         string
+		UserID string
+		Email  string
 	}
 
 	ChangeEmailResponse struct {
@@ -51,7 +51,7 @@ func NewChangeEmail(users changeEmailRepository) ChangeEmail {
 	return func(ctx context.Context, req ChangeEmailRequest) (*ChangeEmailResponse, error) {
 		var (
 			email  = strings.TrimSpace(req.Email)
-			userID = strings.TrimSpace(req.ContextUserID)
+			userID = strings.TrimSpace(req.UserID)
 		)
 
 		if err := validateEmail(email); err != nil {

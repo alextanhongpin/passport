@@ -60,7 +60,7 @@ func NewLogin(users loginRepository) Login {
 			return nil, ErrEmailOrPasswordInvalid
 		}
 
-		if !user.IsConfirmationRequired() {
+		if user.IsConfirmationRequired() {
 			return nil, ErrConfirmationRequired
 		}
 
