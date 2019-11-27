@@ -171,9 +171,7 @@ func (p *Postgres) WithConfirmationToken(ctx context.Context, token string) (*Us
 
 func (p *Postgres) HasEmail(ctx context.Context, email string) (bool, error) {
 	stmt := `
-		SELECT 	1
-		FROM 	login
-		WHERE 	EXISTS (SELECT 1 FROM login WHERE email = $1)
+		SELECT EXISTS (SELECT 1 FROM login WHERE email = $1)
 	`
 	var exists bool
 	if err := p.db.QueryRow(stmt, email).Scan(&exists); err != nil {

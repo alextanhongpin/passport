@@ -31,7 +31,7 @@ func (suite *TestPostgresSuite) SetupTest() {
 	// Create a mock user.
 	var (
 		email    = "john.doe@mail.com"
-		password = "xyz"
+		password = "123456"
 		err      error
 	)
 	suite.user, err = suite.repository.Create(context.TODO(), email, password)
@@ -49,7 +49,7 @@ func (suite *TestPostgresSuite) TearDownTest() {
 func (suite *TestPostgresSuite) TestCreate() {
 	var (
 		email    = "jane@mail.com"
-		password = "xyz"
+		password = "123456"
 	)
 	user, err := suite.repository.Create(context.TODO(), email, password)
 	suite.Nil(err)
@@ -140,6 +140,12 @@ type TestAuthenticateSuite struct {
 	login            passport.Login
 	register         passport.Register
 	sendConfirmation passport.SendConfirmation
+
+	// Password.
+	changePassword    passport.ChangePassword
+	sendResetPassword passport.SendResetPassword
+	resetPassword     passport.ResetPassword
+	changeEmail       passport.ChangeEmail
 }
 
 func (suite *TestAuthenticateSuite) SetupSuite() {
@@ -149,6 +155,10 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	suite.login = passport.NewLogin(suite.repository)
 	suite.register = passport.NewRegister(suite.repository)
 	suite.sendConfirmation = passport.NewSendConfirmation(suite.repository)
+	suite.changePassword = passport.NewChangePassword(suite.repository)
+	suite.sendResetPassword = passport.NewSendResetPassword(suite.repository)
+	suite.resetPassword = passport.NewResetPassword(suite.repository)
+	suite.changeEmail = passport.NewChangeEmail(suite.repository)
 }
 
 func (suite *TestAuthenticateSuite) SetupTest() {
@@ -207,28 +217,12 @@ func (suite *TestAuthenticateSuite) TestLoginRegisteredUserUnconfirmed() {
 }
 
 func (suite *TestAuthenticateSuite) TestLoginRegisteredUserConfirmed() {
-	sendConfirmationRes, err := suite.sendConfirmation(context.TODO(), passport.SendConfirmationRequest{
-		Email: "john.doe@mail.com",
-	})
-	suite.Nil(err)
-	suite.True(sendConfirmationRes.Success)
-	suite.True(len(sendConfirmationRes.Token) > 0)
-
-	confirmRes, err := suite.confirm(context.TODO(), passport.ConfirmRequest{
-		Token: sendConfirmationRes.Token,
-	})
-	suite.Nil(err)
-	suite.True(confirmRes.Success)
-	// user, err := suite.repository.Find(context.TODO(), suite.id)
-	// suite.Nil(err)
-
-	loginRes, err := suite.login(context.TODO(), passport.LoginRequest{
-		Email:    "john.doe@mail.com",
-		Password: "123456",
-	})
-	suite.Nil(err)
-	suite.NotNil(loginRes)
-	suite.Equal("john.doe@mail.com", loginRes.User.Email)
+	var (
+		email    = "john.doe@mail.com"
+		password = "123456"
+	)
+	confirmFn(suite, email)
+	loginFn(suite, email, password)
 }
 
 func (suite *TestAuthenticateSuite) TestLoginWrongPassword() {
@@ -241,19 +235,93 @@ func (suite *TestAuthenticateSuite) TestLoginWrongPassword() {
 	suite.Equal(passport.ErrEmailOrPasswordInvalid, err)
 }
 
+func (suite *TestAuthenticateSuite) TestChangePassword() {
+	var (
+		email    = "john.doe@mail.com"
+		password = "newpass"
+	)
+	confirmFn(suite, email)
+	res, err := suite.changePassword(context.TODO(), passport.ChangePasswordRequest{
+		UserID:          suite.id,
+		Password:        password,
+		ConfirmPassword: password,
+	})
+	suite.Nil(err)
+	suite.True(res.Success)
+
+	loginFn(suite, email, password)
+}
+
+func (suite *TestAuthenticateSuite) TestResetPassword() {
+	var (
+		email    = "john.doe@mail.com"
+		password = "newpass"
+	)
+	confirmFn(suite, email)
+	sendResetPasswordRes, err := suite.sendResetPassword(context.TODO(), passport.SendResetPasswordRequest{
+		Email: email,
+	})
+	suite.Nil(err)
+	suite.True(sendResetPasswordRes.Success)
+	suite.True(len(sendResetPasswordRes.Token) > 0)
+
+	resetPasswordRes, err := suite.resetPassword(context.TODO(), passport.ResetPasswordRequest{
+		Token:           sendResetPasswordRes.Token,
+		Password:        password,
+		ConfirmPassword: password,
+	})
+	suite.Nil(err)
+	suite.True(resetPasswordRes.Success)
+
+	loginFn(suite, email, password)
+}
+
+func (suite *TestAuthenticateSuite) TestChangeEmail() {
+	var (
+		newEmail = "jane.doe@mail.com"
+		password = "123456"
+	)
+	changeEmailRes, err := suite.changeEmail(context.TODO(), passport.ChangeEmailRequest{
+		UserID: suite.id,
+		Email:  newEmail,
+	})
+	suite.Nil(err)
+	suite.True(changeEmailRes.Success)
+	suite.True(len(changeEmailRes.Token) > 0)
+
+	confirmRes, err := suite.confirm(context.TODO(), passport.ConfirmRequest{
+		Token: changeEmailRes.Token,
+	})
+	suite.Nil(err)
+	suite.True(confirmRes.Success)
+
+	loginFn(suite, newEmail, password)
+}
+
+func confirmFn(suite *TestAuthenticateSuite, email string) {
+	sendConfirmationRes, err := suite.sendConfirmation(context.TODO(), passport.SendConfirmationRequest{
+		Email: email,
+	})
+	suite.Nil(err)
+	suite.True(sendConfirmationRes.Success)
+	suite.True(len(sendConfirmationRes.Token) > 0)
+
+	confirmRes, err := suite.confirm(context.TODO(), passport.ConfirmRequest{
+		Token: sendConfirmationRes.Token,
+	})
+	suite.Nil(err)
+	suite.True(confirmRes.Success)
+}
+
+func loginFn(suite *TestAuthenticateSuite, email, password string) {
+	res, err := suite.login(context.TODO(), passport.LoginRequest{
+		Email:    email,
+		Password: password,
+	})
+	suite.Nil(err)
+	suite.Equal(suite.id, res.User.ID)
+}
+
 func TestAuthenticateTestSuite(t *testing.T) {
 	suite.Run(t, new(TestAuthenticateSuite))
 }
-
-// NEW
-
-// type TestPasswordSuite struct {
-//         suite.Suite
-//         changePassword passport.ChangePassword
-//         sendResetPassword passport.SendResetPassword
-//         resetPassword passport.ResetPassport
-// }
-//
-// func (suite *TestPasswordSuite) TestChangePassword() {
-//
-// }
