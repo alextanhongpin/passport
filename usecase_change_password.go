@@ -13,12 +13,12 @@ type ChangePassword func(context.Context, ChangePasswordRequest) (*ChangePasswor
 
 type (
 	ChangePasswordRequest struct {
-		UserID          string
-		Password        string
-		ConfirmPassword string
+		UserID          string `json:"user_id"`
+		Password        string `json:"password"`
+		ConfirmPassword string `json:"confirm_password"`
 	}
 	ChangePasswordResponse struct {
-		Success bool
+		Success bool `json:"success"`
 	}
 )
 

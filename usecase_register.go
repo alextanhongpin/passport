@@ -11,13 +11,11 @@ type Register func(ctx context.Context, req RegisterRequest) (*RegisterResponse,
 
 type (
 	RegisterRequest struct {
-		Email    string
-		Password string
-		// ClientIP  string
-		// UserAgent string
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	RegisterResponse struct {
-		User User
+		User User `json:"user"`
 	}
 )
 

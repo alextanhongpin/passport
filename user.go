@@ -14,10 +14,10 @@ const (
 
 // User represents the authenticatable Entity.
 type User struct {
-	ID                string
-	CreatedAt         time.Time
-	Email             string
-	EncryptedPassword string
+	ID                string    `json:"id,omitempty"`
+	CreatedAt         time.Time `json:"created_at,omitempty"`
+	Email             string    `json:"email,omitempty"`
+	EncryptedPassword string    `json:"encrypted_password,omitempty"`
 
 	// Allow account to be recovered by resetting the password.
 	Recoverable
@@ -30,7 +30,7 @@ type User struct {
 	// Trackable
 
 	// Allows additionable information to be added to the user struct.
-	Extra Extra
+	Extra Extra `json:"extra,omitempty"`
 }
 
 func (u User) IsConfirmationRequired() bool {

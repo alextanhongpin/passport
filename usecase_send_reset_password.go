@@ -11,11 +11,11 @@ type SendResetPassword func(context.Context, SendResetPasswordRequest) (*SendRes
 
 type (
 	SendResetPasswordRequest struct {
-		Email string
+		Email string `json:"email"`
 	}
 	SendResetPasswordResponse struct {
-		Success bool
-		Token   string
+		Success bool   `json:"success"`
+		Token   string `json:"token"`
 	}
 )
 

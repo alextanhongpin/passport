@@ -11,12 +11,12 @@ type SendConfirmation func(context.Context, SendConfirmationRequest) (*SendConfi
 
 type (
 	SendConfirmationRequest struct {
-		Email string
+		Email string `json:"email"`
 	}
 	SendConfirmationResponse struct {
 		// Indicator on whether to send or not.
-		Success bool
-		Token   string
+		Success bool   `json:"success"`
+		Token   string `json:"token"`
 	}
 )
 

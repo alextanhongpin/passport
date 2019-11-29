@@ -11,13 +11,13 @@ type ChangeEmail func(context.Context, ChangeEmailRequest) (*ChangeEmailResponse
 
 type (
 	ChangeEmailRequest struct {
-		UserID string
-		Email  string
+		UserID string `json:"user_id"`
+		Email  string `json:"email"`
 	}
 
 	ChangeEmailResponse struct {
-		Success bool
-		Token   string
+		Success bool   `json:"success"`
+		Token   string `json:"token"`
 	}
 )
 

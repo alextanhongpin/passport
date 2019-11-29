@@ -17,12 +17,12 @@ type loginRepository interface {
 
 type (
 	LoginRequest struct {
-		Email    string
-		Password string
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	LoginResponse struct {
-		User User
+		User User `json:"user"`
 	}
 )
 

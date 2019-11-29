@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/alextanhongpin/passport"
@@ -76,12 +77,12 @@ func main() {
 	router := httprouter.New()
 	router.POST("/login", ctl.PostLogin)
 	router.POST("/register", ctl.PostRegister)
-	router.POST("/me/emails", ctl.PostChangeEmail)
-	router.PUT("/me/passwords", ctl.PutChangePasswords)
+	router.POST("/user/emails", ctl.PostChangeEmail)
+	router.PUT("/user/passwords", ctl.PutChangePassword)
 	router.GET("/user/confirmations", ctl.GetConfirm)
-	router.POST("/user/confirmations", ctl.SendConfirmation)
-	router.POST("/user/passwords", ctl.ResetPassword)
-	router.POST("/user/passwords", ctl.SendResetPassword)
+	router.POST("/confirmations", ctl.PostSendConfirmation)
+	router.PUT("/passwords", ctl.PutResetPassword)
+	router.POST("/passwords", ctl.PostSendResetPassword)
 
 	http.ListenAndServe(":8080", router)
 }
@@ -90,4 +91,120 @@ type Controller struct {
 	service *AuthService
 }
 
-// func( ctl *Controller ) GetLogin()
+func (ctl *Controller) PostLogin(w http.Response, r *http.Request, ps httprouter.Params) {
+	var req passport.LoginRequest
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := ctl.service.login(r.Context(), req)
+	if err != nil {
+		// Send confirmation email here if required.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Build JWT Token here
+	// res.User.ID
+	json.NewEncoder(w).Encode(res)
+}
+
+func (ctl *Controller) PostRegister(w http.Response, r *http.Request, ps httprouter.Params) {
+	var req passport.RegisterRequest
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := ctl.service.register(r.Context(), req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode(res)
+}
+
+func (ctl *Controller) PostChangeEmail(w http.Response, r *http.Request, ps httprouter.Params) {
+	var req passport.ChangeEmailRequest
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := ctl.service.changeEmail(r.Context(), req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode(res)
+}
+
+func (ctl *Controller) PostChangePassword(w http.Response, r *http.Request, ps httprouter.Params) {
+	var req passport.ChangePasswordRequest
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := ctl.service.changePassword(r.Context(), req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode(res)
+}
+
+func (ctl *Controller) GetConfirm(w http.Response, r *http.Request, ps httprouter.Params) {
+	var req passport.ConfirmRequest
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := ctl.service.confirm(r.Context(), req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(w).Encode(res)
+}
+
+func (ctl *Controller) PostSendConfirmation(w http.Response, r *http.Request, ps httprouter.Params) {
+	var req passport.SendConfirmationRequest
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := ctl.service.sendConfirmation(r.Context(), req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// TODO: Send email here.
+	json.NewEncoder(w).Encode(res)
+}
+
+func (ctl *Controller) PutResetPassword(w http.Response, r *http.Request, ps httprouter.Params) {
+	var req passport.ResetPasswordRequest
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := ctl.service.resetPassword(r.Context(), req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// TODO: Send email here.
+	json.NewEncoder(w).Encode(res)
+}
+
+func (ctl *Controller) PostSendResetPassword(w http.Response, r *http.Request, ps httprouter.Params) {
+	var req passport.SendResetPassword
+	if err := json.NewDecoder(r).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	res, err := ctl.service.sendResetPassword(r.Context(), req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// TODO: Send email here.
+	json.NewEncoder(w).Encode(res)
+}

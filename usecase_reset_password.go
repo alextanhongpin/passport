@@ -13,14 +13,14 @@ type ResetPassword func(context.Context, ResetPasswordRequest) (*ResetPasswordRe
 
 type (
 	ResetPasswordRequest struct {
-		Token           string
-		Password        string
-		ConfirmPassword string
+		Token           string `json:"token"`
+		Password        string `json:"password"`
+		ConfirmPassword string `json:"confirm_password"`
 	}
 	ResetPasswordResponse struct {
 		// Indicator on whether to send or not.
-		Success bool
-		User    User
+		Success bool `json:"success"`
+		User    User `json:"user"`
 	}
 )
 
