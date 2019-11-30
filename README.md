@@ -1,5 +1,5 @@
 [![](https://godoc.org/github.com/alextanhongpin/passport?status.svg)](http://godoc.org/github.com/alextanhongpin/passport)
-
+[![CircleCI](https://circleci.com/gh/alextanhongpin/passport.svg?style=svg)](https://circleci.com/gh/alextanhongpin/passport)
 ##  passport
 
 
