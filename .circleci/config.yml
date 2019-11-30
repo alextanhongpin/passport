@@ -24,7 +24,7 @@ jobs:
           keys: v1-pkg-cache
 
       # specify any bash command here prefixed with `run: `
-      - run: go get -v -t -d ./...
+      - run: go mod download 
       - run: go test -v ./...
 
       - save_cache: # Store cache in the /go/pkg directory
