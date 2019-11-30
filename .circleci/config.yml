@@ -24,6 +24,7 @@ jobs:
           keys: v1-pkg-cache
 
       # specify any bash command here prefixed with `run: `
+      - run: go get
       - run: go mod download 
       - run: go test -v ./...
 
