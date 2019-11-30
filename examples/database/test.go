@@ -31,6 +31,16 @@ func TestConfig(port int) *Config {
 	}
 }
 
+func TestCI(m *testing.M) {
+	var err error
+	db, err = NewTest(TestConfig(5432))
+	if err != nil {
+		log.Fatal(err)
+	}
+	code := m.Run()
+	os.Exit(code)
+}
+
 func TestMain(m *testing.M) {
 	// uses a sensible default on windows (tcp/http) and linux/osx (socket)
 	pool, err := dockertest.NewPool("")

@@ -7,7 +7,13 @@ jobs:
     docker:
       # specify the version
       - image: circleci/golang:1.13
-
+        environment:
+          ENV: ci
+      - image: circleci/postgres:12.0-alpine
+        environment:
+          POSTGRES_USER: root
+          POSTGRES_DB: test
+          POSTGRES_PASSWORD: secret
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
@@ -26,6 +32,16 @@ jobs:
       # specify any bash command here prefixed with `run: `
       - run: go get
       - run: go mod download 
+      - run:
+          name: Waiting for Postgres to be ready
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for Postgres && exit 1
       - run: go test -v ./...
 
       - save_cache: # Store cache in the /go/pkg directory

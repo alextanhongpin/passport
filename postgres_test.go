@@ -3,6 +3,7 @@ package passport_test
 import (
 	"context"
 	"database/sql"
+	"os"
 	"testing"
 
 	"github.com/alextanhongpin/passport"
@@ -12,7 +13,11 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	database.TestMain(m)
+	if os.Getenv("ENV") == "ci" {
+		database.TestCI(m)
+	} else {
+		database.TestMain(m)
+	}
 }
 
 type TestPostgresSuite struct {
