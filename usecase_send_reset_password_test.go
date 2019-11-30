@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/alextanhongpin/passport"
+
 	"github.com/stretchr/testify/assert"
 )
 

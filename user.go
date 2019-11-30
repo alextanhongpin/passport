@@ -4,14 +4,6 @@ import (
 	"time"
 )
 
-const (
-	// ConfirmationPeriodValidity represents the duration the user is
-	// allowed to login the application without verifying the email (set to
-	// 1 month) - after this period, the account will be deactivated after
-	// 6 months (or depending on your requirement).
-	ConfirmationPeriodValidity = 30 * 24 * time.Hour
-)
-
 // User represents the authenticatable Entity.
 type User struct {
 	ID                string    `json:"id,omitempty"`
@@ -33,10 +25,7 @@ type User struct {
 	Extra Extra `json:"extra,omitempty"`
 }
 
+// IsConfirmationRequired checks if the User's email has been verified or not.
 func (u User) IsConfirmationRequired() bool {
 	return !u.Confirmable.IsVerified()
-	// if u.Confirmable.IsVerified() {
-	//         return false
-	// }
-	// return time.Since(u.CreatedAt) > ConfirmationPeriodValidity
 }

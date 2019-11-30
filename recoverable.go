@@ -6,6 +6,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// RecoverableTokenValidity represents the duration the reset password token is
+// valid.
 const RecoverableTokenValidity = 1 * time.Hour
 
 // Recoverable holds the data to reset the User's password.

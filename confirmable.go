@@ -6,9 +6,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// ConfirmationTokenValidity represents the duration the confirmation token is
+// valid.
 const ConfirmationTokenValidity = 24 * time.Hour
 
-// Confirmable holds the necessary data to perform confirmation on user's
+// Confirmable holds the necessary data to perform confirmation on User's
 // email.
 type Confirmable struct {
 	ConfirmationToken  string    `json:"confirmation_token,omitempty"`
