@@ -7,16 +7,7 @@ import (
 	"strings"
 )
 
-type Confirm func(context.Context, ConfirmRequest) (*ConfirmResponse, error)
-
-type (
-	ConfirmRequest struct {
-		Token string `json:"token"`
-	}
-	ConfirmResponse struct {
-		Success bool `json:"success"`
-	}
-)
+type Confirm func(ctx context.Context, token string) error
 
 type confirmRepository interface {
 	WithConfirmationToken(ctx context.Context, token string) (*User, error)
@@ -24,45 +15,36 @@ type confirmRepository interface {
 }
 
 func NewConfirm(users confirmRepository) Confirm {
-	return func(ctx context.Context, req ConfirmRequest) (*ConfirmResponse, error) {
-		token := strings.TrimSpace(req.Token)
+	return func(ctx context.Context, token string) error {
+		token = strings.TrimSpace(token)
 		if token == "" {
-			return nil, ErrTokenRequired
+			return ErrTokenRequired
 		}
 		user, err := users.WithConfirmationToken(ctx, token)
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrTokenNotFound
+			return ErrTokenNotFound
 		}
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		var (
-			email = strings.TrimSpace(user.Email)
-		)
-
-		if err := validateEmail(email); err != nil {
-			return nil, err
+		email := NewEmail(user.Email)
+		if ok := email.Valid(); !ok {
+			return ErrEmailInvalid
 		}
 
 		if user.Confirmable.IsVerified() {
-			return nil, ErrEmailVerified
+			return ErrEmailVerified
 		}
 
 		if !user.Confirmable.IsValid() {
-			return nil, ErrTokenExpired
+			return ErrTokenExpired
 		}
 
 		// Reset confirmable.
 		var confirmable Confirmable
-		success, err := users.UpdateConfirmable(ctx, email, confirmable)
-		if err != nil {
-			return nil, err
-		}
-
-		return &ConfirmResponse{
-			Success: success,
-		}, nil
+		_, err = users.UpdateConfirmable(ctx, email.Value(), confirmable)
+		return err
 	}
 }
 

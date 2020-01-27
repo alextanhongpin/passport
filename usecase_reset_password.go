@@ -5,24 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
-
-	"github.com/alextanhongpin/passwd"
 )
 
-type ResetPassword func(context.Context, ResetPasswordRequest) (*ResetPasswordResponse, error)
-
-type (
-	ResetPasswordRequest struct {
-		Token           string `json:"token"`
-		Password        string `json:"password"`
-		ConfirmPassword string `json:"confirm_password"`
-	}
-	ResetPasswordResponse struct {
-		// Indicator on whether to send or not.
-		Success bool `json:"success"`
-		User    User `json:"user"`
-	}
-)
+type ResetPassword func(ctx context.Context, token string, password, confirmPassword Password) (*User, error)
 
 type resetPasswordRepository interface {
 	WithResetPasswordToken(ctx context.Context, token string) (*User, error)
@@ -31,19 +16,15 @@ type resetPasswordRepository interface {
 }
 
 func NewResetPassword(users resetPasswordRepository) ResetPassword {
-	return func(ctx context.Context, req ResetPasswordRequest) (*ResetPasswordResponse, error) {
-		var (
-			token           = strings.TrimSpace(req.Token)
-			password        = strings.TrimSpace(req.Password)
-			confirmPassword = strings.TrimSpace(req.ConfirmPassword)
-		)
+	return func(ctx context.Context, token string, password, confirmPassword Password) (*User, error) {
+		token = strings.TrimSpace(token)
 		if token == "" {
 			return nil, ErrTokenRequired
 		}
-		if err := validatePassword(password); err != nil {
-			return nil, err
+		if !(password.Valid() && confirmPassword.Valid()) {
+			return nil, ErrPasswordTooShort
 		}
-		if password != confirmPassword {
+		if !password.Equal(confirmPassword) {
 			return nil, ErrPasswordDoNotMatch
 		}
 
@@ -54,7 +35,6 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 		if err != nil {
 			return nil, err
 		}
-
 		if !user.Recoverable.IsValid() {
 			return nil, ErrTokenExpired
 		}
@@ -67,46 +47,38 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 		//         return nil, ErrConfirmationRequired
 		// }
 		// Password must not be the same as the old passwords.
-		match, err := passwd.Compare(password, user.EncryptedPassword)
-		if err != nil {
-			return nil, err
-		}
-		if match {
+		if match := SecurePassword(user.EncryptedPassword).Compare(password); match {
 			return nil, ErrPasswordUsed
 		}
 
-		encrypted, err := passwd.Encrypt(password)
+		securePwd, err := password.Encrypt()
 		if err != nil {
 			return nil, err
 		}
 
 		var (
 			userID    = strings.TrimSpace(user.ID)
-			userEmail = strings.TrimSpace(user.Email)
+			userEmail = NewEmail(user.Email)
 		)
 		if userID == "" {
 			return nil, ErrUserIDRequired
 		}
-		if err := validateEmail(userEmail); err != nil {
-			return nil, ErrEmailRequired
+		if ok := userEmail.Valid(); !ok {
+			return nil, ErrEmailInvalid
 		}
 
-		success, err := users.UpdatePassword(ctx, userID, encrypted)
+		// TODO: Wrap in transactions.
+		_, err = users.UpdatePassword(ctx, userID, securePwd.Value())
 		if err != nil {
 			return nil, err
 		}
 
 		var recoverable Recoverable
-		success, err = users.UpdateRecoverable(ctx, userEmail, recoverable)
+		_, err = users.UpdateRecoverable(ctx, userEmail.Value(), recoverable)
 		if err != nil {
 			return nil, err
 		}
-
-		// Clear older sessions when changing password.
-		return &ResetPasswordResponse{
-			Success: success,
-			User:    *user,
-		}, nil
+		return user, nil
 	}
 }
 

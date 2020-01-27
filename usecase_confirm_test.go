@@ -13,8 +13,7 @@ import (
 
 func TestConfirmValidation(t *testing.T) {
 	assert := assert.New(t)
-	res, err := confirm(&mockConfirmRepository{}, "   ")
-	assert.Nil(res)
+	err := confirm(&mockConfirmRepository{}, "   ")
 	assert.Equal(err, passport.ErrTokenRequired)
 }
 
@@ -23,10 +22,9 @@ func TestConfirmNewToken(t *testing.T) {
 	var (
 		token = "xyz"
 	)
-	res, err := confirm(&mockConfirmRepository{
+	err := confirm(&mockConfirmRepository{
 		withConfirmationTokenError: sql.ErrNoRows,
 	}, token)
-	assert.Nil(res)
 	assert.Equal(err, passport.ErrTokenNotFound)
 }
 
@@ -35,7 +33,7 @@ func TestConfirmTokenExpired(t *testing.T) {
 	var (
 		token = "xyz"
 	)
-	res, err := confirm(&mockConfirmRepository{
+	err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
 			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
@@ -45,7 +43,6 @@ func TestConfirmTokenExpired(t *testing.T) {
 			},
 		},
 	}, token)
-	assert.Nil(res)
 	assert.Equal(passport.ErrTokenExpired, err)
 }
 
@@ -54,7 +51,7 @@ func TestConfirmTokenEmailVerified(t *testing.T) {
 	var (
 		token = "xyz"
 	)
-	res, err := confirm(&mockConfirmRepository{
+	err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
 			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
@@ -65,7 +62,6 @@ func TestConfirmTokenEmailVerified(t *testing.T) {
 			},
 		},
 	}, token)
-	assert.Nil(res)
 	assert.Equal(passport.ErrEmailVerified, err)
 }
 
@@ -74,7 +70,7 @@ func TestConfirmEmailSuccess(t *testing.T) {
 	var (
 		token = "xyz"
 	)
-	res, err := confirm(&mockConfirmRepository{
+	err := confirm(&mockConfirmRepository{
 		withConfirmationTokenResponse: &passport.User{
 			Email: "john.doe@mail.com",
 			Confirmable: passport.Confirmable{
@@ -87,7 +83,6 @@ func TestConfirmEmailSuccess(t *testing.T) {
 		updateConfirmableResponse: true,
 	}, token)
 	assert.Nil(err)
-	assert.True(res.Success)
 }
 
 type mockConfirmRepository struct {
@@ -105,9 +100,9 @@ func (m *mockConfirmRepository) UpdateConfirmable(ctx context.Context, email str
 	return m.updateConfirmableResponse, m.updateConfirmableError
 }
 
-func confirm(repo *mockConfirmRepository, token string) (*passport.ConfirmResponse, error) {
+func confirm(repo *mockConfirmRepository, token string) error {
 	return passport.NewConfirm(repo)(
 		context.TODO(),
-		passport.ConfirmRequest{token},
+		token,
 	)
 }

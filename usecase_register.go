@@ -23,7 +23,6 @@ func NewRegister(users registerRepository) Register {
 		if err != nil {
 			return nil, err
 		}
-
 		return user, nil
 	}
 }

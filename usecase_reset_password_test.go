@@ -20,7 +20,7 @@ func TestResetPasswordValidation(t *testing.T) {
 		err             error
 	}{
 		{"when token is empty", "", "123456", "123456", passport.ErrTokenRequired},
-		{"when password is empty", "xyz", "", "123456", passport.ErrPasswordRequired},
+		{"when password is empty", "xyz", "", "123456", passport.ErrPasswordTooShort},
 		{"when password is too short", "xyz", "1", "123456", passport.ErrPasswordTooShort},
 		{"when password do not match", "xyz", "123456", "654321", passport.ErrPasswordDoNotMatch},
 	}
@@ -135,8 +135,7 @@ func TestResetPasswordSuccess(t *testing.T) {
 		updateRecoverableResponse: true,
 	}, token, password, confirmPassword)
 	assert.Nil(err)
-	assert.True(res.Success)
-	assert.NotNil(res.User)
+	assert.NotNil(res)
 }
 
 type mockResetPasswordRepository struct {
@@ -160,13 +159,11 @@ func (m *mockResetPasswordRepository) UpdateRecoverable(ctx context.Context, ema
 	return m.updateRecoverableResponse, m.updateRecoverableError
 }
 
-func resetPassword(repo *mockResetPasswordRepository, token, password, confirmPassword string) (*passport.ResetPasswordResponse, error) {
+func resetPassword(repo *mockResetPasswordRepository, token, password, confirmPassword string) (*passport.User, error) {
 	return passport.NewResetPassword(repo)(
 		context.TODO(),
-		passport.ResetPasswordRequest{
-			Token:           token,
-			Password:        password,
-			ConfirmPassword: confirmPassword,
-		},
+		token,
+		passport.NewPassword(password),
+		passport.NewPassword(confirmPassword),
 	)
 }
