@@ -40,7 +40,7 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 	}
 
 	checkCanResetPassword := func(recoverable Recoverable) error {
-		if !recoverable.IsValid() {
+		if !recoverable.Valid() {
 			return ErrTokenExpired
 		}
 		if !recoverable.AllowPasswordChange {

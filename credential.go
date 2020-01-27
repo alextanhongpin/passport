@@ -1,5 +1,9 @@
 package passport
 
+import "errors"
+
+var ErrInvalidCredential = errors.New("credential is invalid")
+
 // Credential is the email/password pair to authenticate users.
 type Credential struct {
 	Email    Email
