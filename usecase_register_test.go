@@ -54,7 +54,7 @@ func (m *mockRegisterRepository) Create(ctx context.Context, email, password str
 }
 
 func register(repo *mockRegisterRepository, email, password string) (*passport.User, error) {
-	return passport.NewRegister(repo)(
+	return passport.NewRegister(repo).Exec(
 		context.TODO(),
 		passport.NewCredential(email, password),
 	)
