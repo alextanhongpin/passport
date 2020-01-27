@@ -35,7 +35,7 @@ func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirm
 		return nil, err
 	}
 	if err := r.checkPasswordNotReused(
-		user.SecurePassword(),
+		user.EncryptedPassword,
 		password,
 	); err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (r *ResetPassword) validate(token Token, password, confirmPassword Password
 	if err := token.Validate(); err != nil {
 		return err
 	}
-	if err := password.ValidateEqual(confirmPassword); err != nil {
+	if err := password.Equal(confirmPassword); err != nil {
 		return err
 	}
 	if err := password.Validate(); err != nil {
@@ -106,7 +106,7 @@ func (r *ResetPassword) checkCanResetPassword(recoverable Recoverable) error {
 }
 
 func (r *ResetPassword) checkPasswordNotReused(encrypted SecurePassword, password Password) error {
-	if match := encrypted.Compare(password); match {
+	if err := encrypted.Compare(password); err != nil {
 		return ErrPasswordUsed
 	}
 	return nil

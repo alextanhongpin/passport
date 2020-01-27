@@ -32,7 +32,7 @@ func (l *Login) Exec(ctx context.Context, cred Credential) (*User, error) {
 	}
 
 	if err := l.checkPasswordMatch(
-		user.SecurePassword(),
+		user.EncryptedPassword,
 		cred.Password,
 	); err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (l *Login) findUser(ctx context.Context, email Email) (*User, error) {
 }
 
 func (l *Login) checkPasswordMatch(encrypted SecurePassword, password Password) error {
-	if match := encrypted.Compare(password); !match {
+	if err := encrypted.Compare(password); err != nil {
 		return ErrEmailOrPasswordInvalid
 	}
 	return nil

@@ -31,7 +31,7 @@ func (c *ChangePassword) Exec(ctx context.Context, currentUserID UserID, passwor
 	}
 
 	if err := c.checkPasswordNotUsed(
-		user.SecurePassword(),
+		user.EncryptedPassword,
 		password,
 	); err != nil {
 		return err
@@ -45,7 +45,7 @@ func (c *ChangePassword) Exec(ctx context.Context, currentUserID UserID, passwor
 }
 
 func (c *ChangePassword) validate(userID UserID, password, confirmPassword Password) error {
-	if err := password.ValidateEqual(confirmPassword); err != nil {
+	if err := password.Equal(confirmPassword); err != nil {
 		return err
 	}
 	if err := password.Validate(); err != nil {
@@ -69,7 +69,7 @@ func (c *ChangePassword) findUser(ctx context.Context, userID UserID) (*User, er
 }
 
 func (c *ChangePassword) checkPasswordNotUsed(encrypted SecurePassword, plainText Password) error {
-	if match := encrypted.Compare(plainText); match {
+	if err := encrypted.Compare(plainText); err != nil {
 		return ErrPasswordUsed
 	}
 	return nil

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/passport"
-	"github.com/alextanhongpin/passwd"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -52,9 +51,9 @@ func TestLoginExistingUser(t *testing.T) {
 
 	var (
 		email    = "john.doe@mail.com"
-		password = "12345678"
+		password = passport.NewPlainTextPassword("12345678")
 	)
-	encrypted, err := passwd.Encrypt(password)
+	encrypted, err := password.Encrypt()
 	assert.Nil(err)
 
 	repo := &mockLoginRepository{
@@ -69,11 +68,10 @@ func TestLoginExistingUser(t *testing.T) {
 	}
 
 	t.Run("when password is correct", func(t *testing.T) {
-		user, err := login(repo, email, password)
+		user, err := login(repo, email, password.Value())
 		assert.Nil(err)
 		assert.Equal(email, user.Email)
-		assert.Equal(encrypted, user.EncryptedPassword)
-
+		assert.Nil(user.EncryptedPassword.Compare(password))
 	})
 
 	t.Run("when password is incorrect", func(t *testing.T) {
