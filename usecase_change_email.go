@@ -4,22 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 )
 
-type ChangeEmail func(context.Context, ChangeEmailRequest) (*ChangeEmailResponse, error)
-
-type (
-	ChangeEmailRequest struct {
-		UserID string `json:"user_id"`
-		Email  string `json:"email"`
-	}
-
-	ChangeEmailResponse struct {
-		Success bool   `json:"success"`
-		Token   string `json:"token"`
-	}
-)
+type ChangeEmail func(ctx context.Context, currentUserID string, email Email) (string, error)
 
 type (
 	changeEmailRepository interface {
@@ -48,52 +35,40 @@ func (c *ChangeEmailRepository) Find(ctx context.Context, id string) (*User, err
 }
 
 func NewChangeEmail(users changeEmailRepository) ChangeEmail {
-	return func(ctx context.Context, req ChangeEmailRequest) (*ChangeEmailResponse, error) {
-		var (
-			email  = strings.TrimSpace(req.Email)
-			userID = strings.TrimSpace(req.UserID)
-		)
-
-		if err := validateEmail(email); err != nil {
-			return nil, err
+	return func(ctx context.Context, currentUserID string, email Email) (string, error) {
+		if ok := email.Valid(); !ok {
+			return "", ErrEmailInvalid
 		}
-		if userID == "" {
-			return nil, ErrUserIDRequired
+		if currentUserID == "" {
+			return "", ErrUserIDRequired
 		}
 
-		exists, err := users.HasEmail(ctx, email)
-		if err != nil {
-			return nil, err
+		exists, err := users.HasEmail(ctx, email.Value())
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return "", err
 		}
 		if exists {
-			return nil, ErrEmailExists
+			return "", ErrEmailExists
 		}
 
-		user, err := users.Find(ctx, userID)
+		user, err := users.Find(ctx, currentUserID)
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrUserNotFound
+			return "", ErrUserNotFound
 		}
 		if err != nil {
-			return nil, err
+			return "", err
+		}
+		currEmail := NewEmail(user.Email)
+		if ok := currEmail.Valid(); !ok {
+			return "", ErrEmailInvalid
 		}
 
-		var (
-			userEmail = strings.TrimSpace(user.Email)
-		)
-		if err := validateEmail(userEmail); err != nil {
-			return nil, err
-		}
-
-		var confirmable = NewConfirmable(email)
-		success, err := users.UpdateConfirmable(ctx, userEmail, confirmable)
-		if err != nil {
-			return nil, err
+		var confirmable = NewConfirmable(email.Value())
+		if _, err = users.UpdateConfirmable(ctx, currEmail.Value(), confirmable); err != nil {
+			return "", err
 		}
 
 		// Return the confirmable in order to send the email.
-		return &ChangeEmailResponse{
-			Success: success,
-			Token:   confirmable.ConfirmationToken,
-		}, nil
+		return confirmable.ConfirmationToken, nil
 	}
 }

@@ -183,10 +183,13 @@ func (suite *TestAuthenticateSuite) SetupTest() {
 }
 
 func (suite *TestAuthenticateSuite) TestLoginNewUser() {
-	res, err := suite.login(context.TODO(), passport.LoginRequest{
-		Email:    "jane.doe@mail.com",
-		Password: "124356",
-	})
+	var (
+		email    = "jane.doe@mail.com"
+		password = "124356"
+	)
+	cred := passport.NewCredential(email, password)
+
+	res, err := suite.login(context.TODO(), cred)
 	suite.Nil(res)
 	suite.Equal(passport.ErrEmailNotFound, err)
 }
@@ -212,10 +215,12 @@ func (suite *TestAuthenticateSuite) TestRegisterExistingUser() {
 }
 
 func (suite *TestAuthenticateSuite) TestLoginRegisteredUserUnconfirmed() {
-	res, err := suite.login(context.TODO(), passport.LoginRequest{
-		Email:    "john.doe@mail.com",
-		Password: "123456",
-	})
+	var (
+		email    = "john.doe@mail.com"
+		password = "123456"
+	)
+	cred := passport.NewCredential(email, password)
+	res, err := suite.login(context.TODO(), cred)
 	suite.Nil(res)
 	suite.NotNil(err)
 	suite.Equal(passport.ErrConfirmationRequired, err)
@@ -231,7 +236,7 @@ func (suite *TestAuthenticateSuite) TestLoginRegisteredUserConfirmed() {
 }
 
 func (suite *TestAuthenticateSuite) TestLoginWrongPassword() {
-	res, err := suite.login(context.TODO(), passport.LoginRequest{
+	res, err := suite.login(context.TODO(), passport.Credential{
 		Email:    "john.doe@mail.com",
 		Password: "654321",
 	})
@@ -319,12 +324,11 @@ func confirmFn(suite *TestAuthenticateSuite, email string) {
 }
 
 func loginFn(suite *TestAuthenticateSuite, email, password string) {
-	res, err := suite.login(context.TODO(), passport.LoginRequest{
-		Email:    email,
-		Password: password,
-	})
+	cred := passport.NewCredential(email, password)
+
+	user, err := suite.login(context.TODO(), cred)
 	suite.Nil(err)
-	suite.Equal(suite.id, res.User.ID)
+	suite.Equal(suite.id, user.ID)
 }
 
 func TestAuthenticateTestSuite(t *testing.T) {

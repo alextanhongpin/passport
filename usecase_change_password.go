@@ -4,23 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
-
-	"github.com/alextanhongpin/passwd"
 )
 
-type ChangePassword func(context.Context, ChangePasswordRequest) (*ChangePasswordResponse, error)
-
-type (
-	ChangePasswordRequest struct {
-		UserID          string `json:"user_id"`
-		Password        string `json:"password"`
-		ConfirmPassword string `json:"confirm_password"`
-	}
-	ChangePasswordResponse struct {
-		Success bool `json:"success"`
-	}
-)
+type ChangePassword func(ctx context.Context, currentUserID string, password, confirmPassword Password) error
 
 type changePasswordRepository interface {
 	Find(ctx context.Context, id string) (*User, error)
@@ -41,49 +27,33 @@ func (c *ChangePasswordRepository) UpdatePassword(ctx context.Context, userID, e
 }
 
 func NewChangePassword(users changePasswordRepository) ChangePassword {
-	return func(ctx context.Context, req ChangePasswordRequest) (*ChangePasswordResponse, error) {
-		var (
-			userID          = strings.TrimSpace(req.UserID)
-			password        = strings.TrimSpace(req.Password)
-			confirmPassword = strings.TrimSpace(req.ConfirmPassword)
-		)
-		if err := validatePassword(password); err != nil {
-			return nil, err
+	return func(ctx context.Context, currentUserID string, password, confirmPassword Password) error {
+		if !(password.Valid() && confirmPassword.Valid()) {
+			return ErrPasswordTooShort
 		}
-		if password != confirmPassword {
-			return nil, ErrPasswordDoNotMatch
+		if equal := password.Equal(confirmPassword); !equal {
+			return ErrPasswordDoNotMatch
 		}
-		if userID == "" {
-			return nil, ErrUserIDRequired
+		if currentUserID == "" {
+			return ErrUserIDRequired
 		}
 
-		user, err := users.Find(ctx, userID)
+		user, err := users.Find(ctx, currentUserID)
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrUserNotFound
+			return ErrUserNotFound
 		}
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		match, err := passwd.Compare(password, user.EncryptedPassword)
+		if match := SecurePassword(user.EncryptedPassword).Compare(password); match {
+			return ErrPasswordUsed
+		}
+		securePwd, err := password.Encrypt()
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if match {
-			return nil, ErrPasswordUsed
-		}
-
-		encrypted, err := passwd.Encrypt(password)
-		if err != nil {
-			return nil, err
-		}
-
-		success, err := users.UpdatePassword(ctx, userID, encrypted)
-		if err != nil {
-			return nil, err
-		}
-		return &ChangePasswordResponse{
-			Success: success,
-		}, nil
+		_, err = users.UpdatePassword(ctx, currentUserID, securePwd.Value())
+		return err
 	}
 }

@@ -4,27 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
-
-	"github.com/alextanhongpin/passwd"
 )
 
-type Login func(context.Context, LoginRequest) (*LoginResponse, error)
+type Login func(context.Context, Credential) (*User, error)
 
 type loginRepository interface {
 	WithEmail(ctx context.Context, email string) (*User, error)
 }
-
-type (
-	LoginRequest struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	LoginResponse struct {
-		User User `json:"user"`
-	}
-)
 
 type LoginRepository struct {
 	WithEmailFunc WithEmail
@@ -35,16 +21,12 @@ func (l *LoginRepository) WithEmail(ctx context.Context, email string) (*User, e
 }
 
 func NewLogin(users loginRepository) Login {
-	return func(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
-		var (
-			email    = strings.TrimSpace(req.Email)
-			password = strings.TrimSpace(req.Password)
-		)
-		if err := validateEmailAndPassword(email, password); err != nil {
-			return nil, err
+	return func(ctx context.Context, cred Credential) (*User, error) {
+		if ok := cred.Valid(); !ok {
+			return nil, ErrInvalidCredential
 		}
 
-		user, err := users.WithEmail(ctx, email)
+		user, err := users.WithEmail(ctx, cred.Email.Value())
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrEmailNotFound
 		}
@@ -52,10 +34,7 @@ func NewLogin(users loginRepository) Login {
 			return nil, err
 		}
 
-		match, err := passwd.Compare(password, user.EncryptedPassword)
-		if err != nil {
-			return nil, err
-		}
+		match := SecurePassword(user.EncryptedPassword).Compare(cred.Password)
 		if !match {
 			return nil, ErrEmailOrPasswordInvalid
 		}
@@ -64,8 +43,6 @@ func NewLogin(users loginRepository) Login {
 			return nil, ErrConfirmationRequired
 		}
 
-		return &LoginResponse{
-			User: *user,
-		}, err
+		return user, nil
 	}
 }

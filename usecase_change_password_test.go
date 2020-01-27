@@ -21,17 +21,16 @@ func TestChangePasswordValidation(t *testing.T) {
 	}{
 
 		{"when user_id is not provided", "", "123456", "123456", passport.ErrUserIDRequired},
-		{"when password is not provided", "1", "", "123456", passport.ErrPasswordRequired},
+		{"when password is not provided", "1", "", "123456", passport.ErrPasswordTooShort},
 		{"when password is too short", "1", "12345", "12345", passport.ErrPasswordTooShort},
-		{"when confirm_password is not provided", "1", "123456", "", passport.ErrPasswordDoNotMatch},
+		{"when confirm_password is not provided", "1", "123456", "", passport.ErrPasswordTooShort},
 		{"when password do not match", "1", "123456", "654321", passport.ErrPasswordDoNotMatch},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
-			res, err := changePassword(&mockChangePasswordRepository{}, tt.userID, tt.password, tt.confirmPassword)
-			assert.Nil(res)
+			err := changePassword(&mockChangePasswordRepository{}, tt.userID, tt.password, tt.confirmPassword)
 			assert.Equal(tt.err, err)
 		})
 	}
@@ -47,8 +46,7 @@ func TestChangePasswordNewUser(t *testing.T) {
 	repo := &mockChangePasswordRepository{
 		findError: sql.ErrNoRows,
 	}
-	res, err := changePassword(repo, userID, password, confirmPassword)
-	assert.Nil(res)
+	err := changePassword(repo, userID, password, confirmPassword)
 	assert.Equal(passport.ErrUserNotFound, err)
 }
 
@@ -67,8 +65,7 @@ func TestChangePasswordSamePassword(t *testing.T) {
 			EncryptedPassword: encryptedPassword,
 		},
 	}
-	res, err := changePassword(repo, userID, password, confirmPassword)
-	assert.Nil(res)
+	err = changePassword(repo, userID, password, confirmPassword)
 	assert.Equal(passport.ErrPasswordUsed, err)
 }
 
@@ -90,9 +87,8 @@ func TestChangePasswordSuccess(t *testing.T) {
 		},
 		updatePasswordResponse: true,
 	}
-	res, err := changePassword(repo, userID, newPassword, confirmPassword)
+	err = changePassword(repo, userID, newPassword, confirmPassword)
 	assert.Nil(nil)
-	assert.True(res.Success)
 }
 
 type mockChangePasswordRepository struct {
@@ -110,13 +106,11 @@ func (m *mockChangePasswordRepository) UpdatePassword(ctx context.Context, userI
 	return m.updatePasswordResponse, m.updatePasswordError
 }
 
-func changePassword(repo *mockChangePasswordRepository, userID, password, confirmPassword string) (*passport.ChangePasswordResponse, error) {
+func changePassword(repo *mockChangePasswordRepository, userID, password, confirmPassword string) error {
 	return passport.NewChangePassword(repo)(
 		context.TODO(),
-		passport.ChangePasswordRequest{
-			UserID:          userID,
-			Password:        password,
-			ConfirmPassword: confirmPassword,
-		},
+		userID,
+		passport.NewPassword(password),
+		passport.NewPassword(confirmPassword),
 	)
 }

@@ -13,13 +13,12 @@ func TestRegisterValidation(t *testing.T) {
 		name     string
 		email    string
 		password string
-		err      error
 	}{
-		{"when email is not provided", "", "123456", passport.ErrEmailRequired},
-		{"when email is not valid", "john.doe", "123456", passport.ErrEmailInvalid},
-		{"when password is not provided", "john.doe@mail.com", "", passport.ErrPasswordRequired},
-		{"when password is not provided", "john.doe@mail.com", "    ", passport.ErrPasswordRequired},
-		{"when password is too short", "john.doe@mail.com", "12345", passport.ErrPasswordTooShort},
+		{"when email is not provided", "", "123456"},
+		{"when email is not valid", "john.doe", "123456"},
+		{"when password is not provided", "john.doe@mail.com", ""},
+		{"when password is not provided", "john.doe@mail.com", "    "},
+		{"when password is too short", "john.doe@mail.com", "12345"},
 	}
 
 	for _, tt := range tests {
@@ -27,7 +26,7 @@ func TestRegisterValidation(t *testing.T) {
 			assert := assert.New(t)
 			res, err := register(&mockRegisterRepository{}, tt.email, tt.password)
 			assert.Nil(res)
-			assert.Equal(tt.err, err)
+			assert.Equal(passport.ErrInvalidCredential, err)
 		})
 	}
 }
@@ -54,9 +53,9 @@ func (m *mockRegisterRepository) Create(ctx context.Context, email, password str
 	return m.user, m.err
 }
 
-func register(repo *mockRegisterRepository, email, password string) (*passport.RegisterResponse, error) {
+func register(repo *mockRegisterRepository, email, password string) (*passport.User, error) {
 	return passport.NewRegister(repo)(
 		context.TODO(),
-		passport.RegisterRequest{email, password},
+		passport.NewCredential(email, password),
 	)
 }

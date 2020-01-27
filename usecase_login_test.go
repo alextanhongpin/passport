@@ -19,18 +19,17 @@ func TestLoginValidation(t *testing.T) {
 		name     string
 		email    string
 		password string
-		err      error
 	}{
-		{"when email is not provided", "", "123456", passport.ErrEmailRequired},
-		{"when email is not valid", "john.doe", "123456", passport.ErrEmailInvalid},
-		{"when password is not provided", "john.doe@mail.com", "", passport.ErrPasswordRequired},
-		{"when password is too short", "john.doe@mail.com", "12345", passport.ErrPasswordTooShort},
+		{"when email is not provided", "", "123456"},
+		{"when email is not valid", "john.doe", "123456"},
+		{"when password is not provided", "john.doe@mail.com", ""},
+		{"when password is too short", "john.doe@mail.com", "12345"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res, err := login(&mockLoginRepository{}, tt.email, tt.password)
 			assert.Nil(res)
-			assert.Equal(tt.err, err)
+			assert.Equal(passport.ErrInvalidCredential, err)
 		})
 	}
 }
@@ -69,10 +68,10 @@ func TestLoginExistingUser(t *testing.T) {
 	}
 
 	t.Run("when password is correct", func(t *testing.T) {
-		res, err := login(repo, email, password)
+		user, err := login(repo, email, password)
 		assert.Nil(err)
-		assert.Equal(email, res.User.Email)
-		assert.Equal(encrypted, res.User.EncryptedPassword)
+		assert.Equal(email, user.Email)
+		assert.Equal(encrypted, user.EncryptedPassword)
 
 	})
 
@@ -92,9 +91,9 @@ func (m *mockLoginRepository) WithEmail(ctx context.Context, email string) (*pas
 	return m.User, m.Err
 }
 
-func login(repo *mockLoginRepository, email, password string) (*passport.LoginResponse, error) {
+func login(repo *mockLoginRepository, email, password string) (*passport.User, error) {
 	return passport.NewLogin(repo)(
 		context.TODO(),
-		passport.LoginRequest{email, password},
+		passport.NewCredential(email, password),
 	)
 }
