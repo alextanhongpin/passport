@@ -6,18 +6,21 @@ import (
 	"errors"
 )
 
-type login interface {
-	Exec(context.Context, Credential) (*User, error)
-}
+type (
+	login interface {
+		Exec(context.Context, Credential) (*User, error)
+	}
 
-type loginRepository interface {
-	WithEmail(ctx context.Context, email string) (*User, error)
-}
+	loginRepository interface {
+		WithEmail(ctx context.Context, email string) (*User, error)
+	}
 
-type Login struct {
-	users loginRepository
-}
+	Login struct {
+		users loginRepository
+	}
+)
 
+// Exec executes the Login use case.
 func (l *Login) Exec(ctx context.Context, cred Credential) (*User, error) {
 	if err := l.validate(cred); err != nil {
 		return nil, err
@@ -29,7 +32,7 @@ func (l *Login) Exec(ctx context.Context, cred Credential) (*User, error) {
 	}
 
 	if err := l.checkPasswordMatch(
-		SecurePasswordFactory().FromUser(*user),
+		user.SecurePassword(),
 		cred.Password,
 	); err != nil {
 		return nil, err

@@ -24,12 +24,6 @@ func (u UserID) Value() string {
 	return string(u)
 }
 
-type userIDFactory struct{}
-
-func UserIDFactory() *userIDFactory {
-	return &userIDFactory{}
-}
-
-func (u *userIDFactory) FromString(userID string) UserID {
-	return UserID(strings.TrimSpace(userID))
+func NewUserID(id string) UserID {
+	return UserID(strings.TrimSpace(id))
 }

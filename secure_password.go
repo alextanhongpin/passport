@@ -11,10 +11,6 @@ func (s SecurePassword) Compare(password Password) bool {
 	return match
 }
 
-func (s SecurePassword) String() string {
-	return string(s)
-}
-
 // Value returns the password as primitive type.
 func (s SecurePassword) Value() string {
 	return string(s)

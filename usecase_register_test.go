@@ -13,12 +13,14 @@ func TestRegisterValidation(t *testing.T) {
 		name     string
 		email    string
 		password string
+		err      error
 	}{
-		{"when email is not provided", "", "123456"},
-		{"when email is not valid", "john.doe", "123456"},
-		{"when password is not provided", "john.doe@mail.com", ""},
-		{"when password is not provided", "john.doe@mail.com", "    "},
-		{"when password is too short", "john.doe@mail.com", "12345"},
+
+		{"when email is not provided", "", "12345678", passport.ErrEmailRequired},
+		{"when email is not valid", "john.doe", "123456", passport.ErrEmailInvalid},
+		{"when password is not provided", "john.doe@mail.com", "", passport.ErrPasswordRequired},
+		{"when password is not provided", "john.doe@mail.com", "    ", passport.ErrPasswordTooShort},
+		{"when password is too short", "john.doe@mail.com", "12345", passport.ErrPasswordTooShort},
 	}
 
 	for _, tt := range tests {
@@ -26,7 +28,7 @@ func TestRegisterValidation(t *testing.T) {
 			assert := assert.New(t)
 			res, err := register(&mockRegisterRepository{}, tt.email, tt.password)
 			assert.Nil(res)
-			assert.Equal(passport.ErrInvalidCredential, err)
+			assert.Equal(tt.err, err)
 		})
 	}
 }
@@ -35,7 +37,7 @@ func TestUserRegisterSuccess(t *testing.T) {
 	assert := assert.New(t)
 	var (
 		email    = "john.doe@mail.com"
-		password = "123456"
+		password = "12345678"
 	)
 	res, err := register(&mockRegisterRepository{
 		user: &passport.User{},

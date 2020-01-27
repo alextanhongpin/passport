@@ -19,10 +19,10 @@ func TestResetPasswordValidation(t *testing.T) {
 		confirmPassword string
 		err             error
 	}{
-		{"when token is empty", "", "123456", "123456", passport.ErrTokenRequired},
-		{"when password is empty", "xyz", "", "123456", passport.ErrPasswordTooShort},
-		{"when password is too short", "xyz", "1", "123456", passport.ErrPasswordTooShort},
-		{"when password do not match", "xyz", "123456", "654321", passport.ErrPasswordDoNotMatch},
+		{"when token is empty", "", "12345678", "12345678", passport.ErrTokenRequired},
+		{"when password is empty", "xyz", "", "12345678", passport.ErrPasswordDoNotMatch},
+		{"when password is too short", "xyz", "1", "12345678", passport.ErrPasswordDoNotMatch},
+		{"when password do not match", "xyz", "12345678", "87654321", passport.ErrPasswordDoNotMatch},
 	}
 
 	for _, tt := range tests {
@@ -38,8 +38,8 @@ func TestResetPasswordValidation(t *testing.T) {
 func TestResetPasswordNewEmail(t *testing.T) {
 	var (
 		token           = "xyz"
-		password        = "123456"
-		confirmPassword = "123456"
+		password        = "12345678"
+		confirmPassword = "12345678"
 	)
 	assert := assert.New(t)
 	res, err := resetPassword(&mockResetPasswordRepository{
@@ -52,8 +52,8 @@ func TestResetPasswordNewEmail(t *testing.T) {
 func TestResetPasswordTokenExpired(t *testing.T) {
 	var (
 		token           = "xyz"
-		password        = "123456"
-		confirmPassword = "123456"
+		password        = "12345678"
+		confirmPassword = "12345678"
 	)
 	assert := assert.New(t)
 	res, err := resetPassword(&mockResetPasswordRepository{
@@ -70,8 +70,8 @@ func TestResetPasswordTokenExpired(t *testing.T) {
 func TestResetPasswordNotAllowed(t *testing.T) {
 	var (
 		token           = "xyz"
-		password        = "123456"
-		confirmPassword = "123456"
+		password        = "12345678"
+		confirmPassword = "12345678"
 	)
 	assert := assert.New(t)
 	res, err := resetPassword(&mockResetPasswordRepository{
@@ -90,8 +90,8 @@ func TestResetPasswordSamePassword(t *testing.T) {
 	assert := assert.New(t)
 	var (
 		token           = "xyz"
-		password        = "123456"
-		confirmPassword = "123456"
+		password        = "12345678"
+		confirmPassword = "12345678"
 	)
 	encrypted, err := passwd.Encrypt(password)
 	assert.Nil(err)
@@ -113,9 +113,9 @@ func TestResetPasswordSuccess(t *testing.T) {
 	assert := assert.New(t)
 	var (
 		token           = "xyz"
-		password        = "123456"
-		confirmPassword = "123456"
-		oldPassword     = "654321"
+		password        = "12345678"
+		confirmPassword = "12345678"
+		oldPassword     = "87654321"
 	)
 
 	encrypted, err := passwd.Encrypt(oldPassword)
@@ -160,9 +160,9 @@ func (m *mockResetPasswordRepository) UpdateRecoverable(ctx context.Context, ema
 }
 
 func resetPassword(repo *mockResetPasswordRepository, token, password, confirmPassword string) (*passport.User, error) {
-	return passport.NewResetPassword(repo)(
+	return passport.NewResetPassword(repo).Exec(
 		context.TODO(),
-		token,
+		passport.NewToken(token),
 		passport.NewPassword(password),
 		passport.NewPassword(confirmPassword),
 	)

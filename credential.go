@@ -2,6 +2,7 @@ package passport
 
 import "errors"
 
+// ErrInvalidCredential indicates the credential is invalid.
 var ErrInvalidCredential = errors.New("credential is invalid")
 
 // Credential is the email/password pair to authenticate users.

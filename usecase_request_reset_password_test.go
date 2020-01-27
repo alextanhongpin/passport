@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSendResetPasswordValidation(t *testing.T) {
+func TestRequestResetPasswordValidation(t *testing.T) {
 	tests := []struct {
 		name  string
 		email string
@@ -24,42 +24,42 @@ func TestSendResetPasswordValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
-			token, err := sendResetPassword(&mockSendResetPasswordRepository{}, tt.email)
+			token, err := requestResetPassword(&mockRequestResetPasswordRepository{}, tt.email)
 			assert.Equal("", token)
 			assert.Equal(tt.err, err)
 		})
 	}
 }
 
-func TestSendResetPasswordNewEmail(t *testing.T) {
+func TestRequestResetPasswordNewEmail(t *testing.T) {
 	assert := assert.New(t)
-	token, err := sendResetPassword(&mockSendResetPasswordRepository{
+	token, err := requestResetPassword(&mockRequestResetPasswordRepository{
 		updateRecoverableError: sql.ErrNoRows,
 	}, "john.doe@mail.com")
 	assert.Equal("", token)
-	assert.Equal(passport.ErrEmailNotFound, err)
+	assert.Equal(passport.ErrUserNotFound, err)
 }
 
-func TestSendResetPasswordSuccess(t *testing.T) {
+func TestRequestResetPasswordSuccess(t *testing.T) {
 	assert := assert.New(t)
-	token, err := sendResetPassword(&mockSendResetPasswordRepository{
+	token, err := requestResetPassword(&mockRequestResetPasswordRepository{
 		updateRecoverableResponse: true,
 	}, "john.doe@mail.com")
 	assert.Nil(err)
 	assert.True(token != "")
 }
 
-type mockSendResetPasswordRepository struct {
+type mockRequestResetPasswordRepository struct {
 	updateRecoverableResponse bool
 	updateRecoverableError    error
 }
 
-func (m *mockSendResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable passport.Recoverable) (bool, error) {
+func (m *mockRequestResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable passport.Recoverable) (bool, error) {
 	return m.updateRecoverableResponse, m.updateRecoverableError
 }
 
-func sendResetPassword(repo *mockSendResetPasswordRepository, email string) (string, error) {
-	return passport.NewSendResetPassword(repo)(
+func requestResetPassword(repo *mockRequestResetPasswordRepository, email string) (string, error) {
+	return passport.NewRequestResetPassword(repo).Exec(
 		context.TODO(),
 		passport.NewEmail(email),
 	)

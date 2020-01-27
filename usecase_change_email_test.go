@@ -18,7 +18,7 @@ func TestChangeEmailValidation(t *testing.T) {
 		email  string
 		err    error
 	}{
-		{"when email is not provided", "123456", "", passport.ErrEmailInvalid},
+		{"when email is not provided", "123456", "", passport.ErrEmailRequired},
 		{"when email is invalid", "123456", "john.doe", passport.ErrEmailInvalid},
 		{"when user_id is not provided", "", "john.doe@mail.com", passport.ErrUserIDRequired},
 	}
@@ -105,7 +105,7 @@ func (m *mockChangeEmailRepository) UpdateConfirmable(ctx context.Context, email
 }
 
 func changeEmail(repo *mockChangeEmailRepository, userID, email string) (string, error) {
-	return passport.NewChangeEmail(repo)(
+	return passport.NewChangeEmail(repo).Exec(
 		context.TODO(),
 		passport.UserID(userID),
 		passport.NewEmail(email),

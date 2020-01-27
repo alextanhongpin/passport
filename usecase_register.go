@@ -4,17 +4,19 @@ import (
 	"context"
 )
 
-type registerRepository interface {
-	Create(ctx context.Context, email, password string) (*User, error)
-}
+type (
+	registerRepository interface {
+		Create(ctx context.Context, email, password string) (*User, error)
+	}
 
-type register interface {
-	Exec(ctx context.Context, cred Credential) (*User, error)
-}
+	register interface {
+		Exec(ctx context.Context, cred Credential) (*User, error)
+	}
 
-type Register struct {
-	users registerRepository
-}
+	Register struct {
+		users registerRepository
+	}
+)
 
 func (r *Register) Exec(ctx context.Context, cred Credential) (*User, error) {
 	if err := r.validate(cred); err != nil {
@@ -43,4 +45,9 @@ func (r *Register) validate(cred Credential) error {
 
 func (r *Register) encryptPassword(password Password) (SecurePassword, error) {
 	return password.Encrypt()
+}
+
+// NewRegister returns a new Register service.
+func NewRegister(repository registerRepository) *Register {
+	return &Register{repository}
 }

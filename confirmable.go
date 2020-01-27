@@ -7,6 +7,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// ErrConfirmationRequired indicates that the email requires confirmation.
 var ErrConfirmationRequired = errors.New("confirmation required")
 
 // ConfirmationTokenValidity represents the duration the confirmation token is
@@ -25,12 +26,13 @@ type Confirmable struct {
 	UnconfirmedEmail string `json:"unconfirmed_email,omitempty"`
 }
 
-// IsValid checks if the confirmation token is still within the validity
+// Valid checks if the confirmation token is still within the validity
 // period.
 func (c Confirmable) Valid() bool {
 	return time.Since(c.ConfirmationSentAt) < ConfirmationTokenValidity
 }
 
+// ValidateExpiry returns an error indicating the token has expired.
 func (c Confirmable) ValidateExpiry() error {
 	if valid := c.Valid(); !valid {
 		return ErrTokenExpired
@@ -38,11 +40,13 @@ func (c Confirmable) ValidateExpiry() error {
 	return nil
 }
 
-// IsVerified checks if the user's email is verified.
+// Verified checks if the user's email is verified.
 func (c Confirmable) Verified() bool {
 	return !c.ConfirmedAt.IsZero() && c.UnconfirmedEmail == ""
 }
 
+// ValidateConfirmed returns an error indicating the email has not been
+// verified.
 func (c Confirmable) ValidateConfirmed() error {
 	if verified := c.Verified(); !verified {
 		return ErrConfirmationRequired

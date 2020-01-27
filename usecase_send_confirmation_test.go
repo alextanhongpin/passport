@@ -32,7 +32,7 @@ func TestSendConfirmationEmailNewEmail(t *testing.T) {
 		withEmailError: sql.ErrNoRows,
 	}, "john.doe@mail.com")
 	assert.Equal("", token)
-	assert.Equal(passport.ErrEmailNotFound, err)
+	assert.Equal(passport.ErrUserNotFound, err)
 }
 
 func TestSendConfirmationEmailAlreadyVerified(t *testing.T) {
@@ -79,7 +79,7 @@ func (m *mockSendConfirmationRepository) UpdateConfirmable(ctx context.Context, 
 }
 
 func sendConfirmation(repo *mockSendConfirmationRepository, email string) (string, error) {
-	return passport.NewSendConfirmation(repo)(
+	return passport.NewSendConfirmation(repo).Exec(
 		context.TODO(),
 		passport.NewEmail(email),
 	)

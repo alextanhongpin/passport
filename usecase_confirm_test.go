@@ -101,8 +101,8 @@ func (m *mockConfirmRepository) UpdateConfirmable(ctx context.Context, email str
 }
 
 func confirm(repo *mockConfirmRepository, token string) error {
-	return passport.NewConfirm(repo)(
+	return passport.NewConfirm(repo).Exec(
 		context.TODO(),
-		token,
+		passport.NewToken(token),
 	)
 }

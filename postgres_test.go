@@ -147,10 +147,10 @@ type TestAuthenticateSuite struct {
 	sendConfirmation passport.SendConfirmation
 
 	// Password.
-	changePassword    passport.ChangePassword
-	sendResetPassword passport.SendResetPassword
-	resetPassword     passport.ResetPassword
-	changeEmail       passport.ChangeEmail
+	changePassword       passport.ChangePassword
+	requestResetPassword passport.RequestResetPassword
+	resetPassword        passport.ResetPassword
+	changeEmail          passport.ChangeEmail
 }
 
 func (suite *TestAuthenticateSuite) SetupSuite() {
@@ -161,7 +161,7 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	suite.register = passport.NewRegister(suite.repository)
 	suite.sendConfirmation = passport.NewSendConfirmation(suite.repository)
 	suite.changePassword = passport.NewChangePassword(suite.repository)
-	suite.sendResetPassword = passport.NewSendResetPassword(suite.repository)
+	suite.requestResetPassword = passport.NewRequestResetPassword(suite.repository)
 	suite.resetPassword = passport.NewResetPassword(suite.repository)
 	suite.changeEmail = passport.NewChangeEmail(suite.repository)
 }
@@ -268,15 +268,15 @@ func (suite *TestAuthenticateSuite) TestResetPassword() {
 		password = "newpass"
 	)
 	confirmFn(suite, email)
-	sendResetPasswordRes, err := suite.sendResetPassword(context.TODO(), passport.SendResetPasswordRequest{
+	requestResetPasswordRes, err := suite.requestResetPassword(context.TODO(), passport.RequestResetPasswordRequest{
 		Email: email,
 	})
 	suite.Nil(err)
-	suite.True(sendResetPasswordRes.Success)
-	suite.True(len(sendResetPasswordRes.Token) > 0)
+	suite.True(requestResetPasswordRes.Success)
+	suite.True(len(requestResetPasswordRes.Token) > 0)
 
 	resetPasswordRes, err := suite.resetPassword(context.TODO(), passport.ResetPasswordRequest{
-		Token:           sendResetPasswordRes.Token,
+		Token:           requestResetPasswordRes.Token,
 		Password:        password,
 		ConfirmPassword: password,
 	})
