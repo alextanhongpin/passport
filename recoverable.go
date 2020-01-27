@@ -17,9 +17,16 @@ type Recoverable struct {
 	AllowPasswordChange bool      `json:"allow_password_change,omitempty"`
 }
 
-// IsValid checks if the reset password token is within the validity period.
-func (r Recoverable) IsValid() bool {
+// Valid checks if the reset password token is within the validity period.
+func (r Recoverable) Valid() bool {
 	return time.Since(r.ResetPasswordSentAt) < RecoverableTokenValidity
+}
+
+func (r Recoverable) Validate() error {
+	if valid := r.Valid(); !valid {
+		return ErrTokenExpired
+	}
+	return nil
 }
 
 // NewRecoverable returns a new Recoverable.

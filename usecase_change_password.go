@@ -68,10 +68,12 @@ func NewChangePassword(users changePasswordRepository) ChangePassword {
 			return err
 		}
 
-		if err := checkPasswordNotUsed(SecurePassword(user.EncryptedPassword), password); err != nil {
+		if err := checkPasswordNotUsed(
+			SecurePassword(user.EncryptedPassword),
+			password,
+		); err != nil {
 			return err
 		}
-
 		securePwd, err := password.Encrypt()
 		if err != nil {
 			return err

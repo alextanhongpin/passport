@@ -52,8 +52,8 @@ func NewLogin(users loginRepository) Login {
 			return nil, err
 		}
 
-		if user.IsConfirmationRequired() {
-			return nil, ErrConfirmationRequired
+		if err := user.Confirmable.ValidateConfirmed(); err != nil {
+			return nil, err
 		}
 
 		return user, nil

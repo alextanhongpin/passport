@@ -40,12 +40,12 @@ func NewConfirm(users confirmRepository) Confirm {
 			return err
 		}
 
-		if user.Confirmable.IsVerified() {
+		if user.Confirmable.Verified() {
 			return ErrEmailVerified
 		}
 
-		if !user.Confirmable.IsValid() {
-			return ErrTokenExpired
+		if err := user.Confirmable.ValidateExpiry(); err != nil {
+			return err
 		}
 
 		// Reset confirmable.

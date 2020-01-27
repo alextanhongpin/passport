@@ -1,10 +1,13 @@
 package passport
 
 import (
+	"errors"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
+
+var ErrConfirmationRequired = errors.New("confirmation required")
 
 // ConfirmationTokenValidity represents the duration the confirmation token is
 // valid.
@@ -24,13 +27,27 @@ type Confirmable struct {
 
 // IsValid checks if the confirmation token is still within the validity
 // period.
-func (c Confirmable) IsValid() bool {
+func (c Confirmable) Valid() bool {
 	return time.Since(c.ConfirmationSentAt) < ConfirmationTokenValidity
 }
 
+func (c Confirmable) ValidateExpiry() error {
+	if valid := c.Valid(); !valid {
+		return ErrTokenExpired
+	}
+	return nil
+}
+
 // IsVerified checks if the user's email is verified.
-func (c Confirmable) IsVerified() bool {
+func (c Confirmable) Verified() bool {
 	return !c.ConfirmedAt.IsZero() && c.UnconfirmedEmail == ""
+}
+
+func (c Confirmable) ValidateConfirmed() error {
+	if verified := c.Verified(); !verified {
+		return ErrConfirmationRequired
+	}
+	return nil
 }
 
 // NewConfirmable returns a new Confirmable.

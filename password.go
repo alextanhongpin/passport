@@ -12,7 +12,6 @@ var (
 	ErrPasswordUsed             = errors.New("password cannot be reused")
 )
 
-// TODO: Change password min length requirements to be 8.
 const MinPasswordLength = 8
 
 type Password string
@@ -22,7 +21,7 @@ func (p Password) Valid() bool {
 }
 
 func (p Password) Validate() error {
-	if (p.Value()) == "" {
+	if p.Value() == "" {
 		return ErrPasswordRequired
 	}
 	if !p.Valid() {

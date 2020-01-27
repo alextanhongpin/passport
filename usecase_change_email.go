@@ -71,6 +71,7 @@ func NewChangeEmail(users changeEmailRepository) ChangeEmail {
 		if err := validate(currentUserID, email); err != nil {
 			return "", err
 		}
+
 		if err := checkEmailExists(ctx, email); err != nil {
 			return "", err
 		}

@@ -1,8 +1,11 @@
 package passport
 
 import (
+	"errors"
 	"time"
 )
+
+var ErrUserNotFound = errors.New("user not found")
 
 // User represents the authenticatable Entity.
 type User struct {
@@ -23,9 +26,4 @@ type User struct {
 
 	// Allows additionable information to be added to the user struct.
 	Extra Extra `json:"extra,omitempty"`
-}
-
-// IsConfirmationRequired checks if the User's email has been verified or not.
-func (u User) IsConfirmationRequired() bool {
-	return !u.Confirmable.IsVerified()
 }

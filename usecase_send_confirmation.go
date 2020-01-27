@@ -25,13 +25,6 @@ func NewSendConfirmation(users sendConfirmationRepository) SendConfirmation {
 		return user, nil
 	}
 
-	checkUserAlreadyVerified := func(confirmable Confirmable) error {
-		if verified := confirmable.IsVerified(); verified {
-			return ErrEmailVerified
-		}
-		return nil
-	}
-
 	return func(ctx context.Context, email Email) (string, error) {
 		if err := email.Validate(); err != nil {
 			return "", err
@@ -42,7 +35,7 @@ func NewSendConfirmation(users sendConfirmationRepository) SendConfirmation {
 			return "", err
 		}
 
-		if err := checkUserAlreadyVerified(user.Confirmable); err != nil {
+		if err := user.Confirmable.ValidateConfirmed(); err != nil {
 			return "", err
 		}
 
