@@ -1,11 +1,5 @@
 package passport
 
-import (
-	"errors"
-)
-
-var ErrInvalidCredential = errors.New("credential is invalid")
-
 type Credential struct {
 	Email    Email
 	Password Password
@@ -13,6 +7,16 @@ type Credential struct {
 
 func (c Credential) Valid() bool {
 	return c.Email.Valid() && c.Password.Valid()
+}
+
+func (c Credential) Validate() error {
+	if err := c.Email.Validate(); err != nil {
+		return err
+	}
+	if err := c.Password.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewCredential(email, password string) Credential {

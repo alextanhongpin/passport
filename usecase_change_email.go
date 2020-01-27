@@ -36,8 +36,8 @@ func (c *ChangeEmailRepository) Find(ctx context.Context, id string) (*User, err
 
 func NewChangeEmail(users changeEmailRepository) ChangeEmail {
 	return func(ctx context.Context, currentUserID string, email Email) (string, error) {
-		if ok := email.Valid(); !ok {
-			return "", ErrEmailInvalid
+		if err := email.Validate(); err != nil {
+			return "", err
 		}
 		if currentUserID == "" {
 			return "", ErrUserIDRequired
@@ -59,8 +59,8 @@ func NewChangeEmail(users changeEmailRepository) ChangeEmail {
 			return "", err
 		}
 		currEmail := NewEmail(user.Email)
-		if ok := currEmail.Valid(); !ok {
-			return "", ErrEmailInvalid
+		if err := currEmail.Validate(); err != nil {
+			return "", err
 		}
 
 		var confirmable = NewConfirmable(email.Value())

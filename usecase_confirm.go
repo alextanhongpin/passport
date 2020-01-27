@@ -29,8 +29,8 @@ func NewConfirm(users confirmRepository) Confirm {
 		}
 
 		email := NewEmail(user.Email)
-		if ok := email.Valid(); !ok {
-			return ErrEmailInvalid
+		if err := email.Validate(); err != nil {
+			return err
 		}
 
 		if user.Confirmable.IsVerified() {

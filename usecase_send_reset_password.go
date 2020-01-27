@@ -4,42 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 )
 
-type SendResetPassword func(context.Context, SendResetPasswordRequest) (*SendResetPasswordResponse, error)
-
-type (
-	SendResetPasswordRequest struct {
-		Email string `json:"email"`
-	}
-	SendResetPasswordResponse struct {
-		Success bool   `json:"success"`
-		Token   string `json:"token"`
-	}
-)
+type SendResetPassword func(ctx context.Context, email Email) (string, error)
 
 func NewSendResetPassword(users sendResetPasswordRepository) SendResetPassword {
-	return func(ctx context.Context, req SendResetPasswordRequest) (*SendResetPasswordResponse, error) {
-		email := strings.TrimSpace(req.Email)
-		if err := validateEmail(email); err != nil {
-			return nil, err
+	return func(ctx context.Context, email Email) (string, error) {
+		if err := email.Validate(); err != nil {
+			return "", err
 		}
-
 		recoverable := NewRecoverable()
-		success, err := users.UpdateRecoverable(ctx, email, recoverable)
+		success, err := users.UpdateRecoverable(ctx, email.Value(), recoverable)
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrEmailNotFound
+			return "", ErrEmailNotFound
 		}
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
 		// Return enough data for us to send the email.
-		return &SendResetPasswordResponse{
-			Success: success,
-			Token:   recoverable.ResetPasswordToken,
-		}, nil
+		return recoverable.ResetPasswordToken, nil
 	}
 }
 

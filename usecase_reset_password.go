@@ -21,11 +21,11 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 		if token == "" {
 			return nil, ErrTokenRequired
 		}
-		if !(password.Valid() && confirmPassword.Valid()) {
-			return nil, ErrPasswordTooShort
+		if err := password.ValidateEqual(confirmPassword); err != nil {
+			return nil, err
 		}
-		if !password.Equal(confirmPassword) {
-			return nil, ErrPasswordDoNotMatch
+		if err := password.Validate(); err != nil {
+			return nil, err
 		}
 
 		user, err := users.WithResetPasswordToken(ctx, token)
@@ -63,8 +63,8 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 		if userID == "" {
 			return nil, ErrUserIDRequired
 		}
-		if ok := userEmail.Valid(); !ok {
-			return nil, ErrEmailInvalid
+		if err := userEmail.Validate(); err != nil {
+			return nil, err
 		}
 
 		// TODO: Wrap in transactions.

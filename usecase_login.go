@@ -22,8 +22,8 @@ func (l *LoginRepository) WithEmail(ctx context.Context, email string) (*User, e
 
 func NewLogin(users loginRepository) Login {
 	return func(ctx context.Context, cred Credential) (*User, error) {
-		if ok := cred.Valid(); !ok {
-			return nil, ErrInvalidCredential
+		if err := cred.Validate(); err != nil {
+			return nil, err
 		}
 
 		user, err := users.WithEmail(ctx, cred.Email.Value())

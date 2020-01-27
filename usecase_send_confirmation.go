@@ -4,21 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 )
 
-type SendConfirmation func(context.Context, SendConfirmationRequest) (*SendConfirmationResponse, error)
-
-type (
-	SendConfirmationRequest struct {
-		Email string `json:"email"`
-	}
-	SendConfirmationResponse struct {
-		// Indicator on whether to send or not.
-		Success bool   `json:"success"`
-		Token   string `json:"token"`
-	}
-)
+type SendConfirmation func(ctx context.Context, email Email) (string, error)
 
 type sendConfirmationRepository interface {
 	WithEmail(ctx context.Context, email string) (*User, error)
@@ -26,37 +14,31 @@ type sendConfirmationRepository interface {
 }
 
 func NewSendConfirmation(users sendConfirmationRepository) SendConfirmation {
-	return func(ctx context.Context, req SendConfirmationRequest) (*SendConfirmationResponse, error) {
-		var (
-			email = strings.TrimSpace(req.Email)
-		)
-		if err := validateEmail(email); err != nil {
-			return nil, err
+	return func(ctx context.Context, email Email) (string, error) {
+		if err := email.Validate(); err != nil {
+			return "", err
 		}
 
-		user, err := users.WithEmail(ctx, email)
+		user, err := users.WithEmail(ctx, email.Value())
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrEmailNotFound
+			return "", ErrEmailNotFound
 		}
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
 		// Don't resend for users whose email is already confirmed.
 		if user.Confirmable.IsVerified() {
-			return nil, ErrEmailVerified
+			return "", ErrEmailVerified
 		}
 
-		confirmable := NewConfirmable(email)
-		success, err := users.UpdateConfirmable(ctx, email, confirmable)
+		confirmable := NewConfirmable(email.Value())
+		_, err = users.UpdateConfirmable(ctx, email.Value(), confirmable)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 		// Return the confirmable in order to send the email.
-		return &SendConfirmationResponse{
-			Success: success,
-			Token:   confirmable.ConfirmationToken,
-		}, nil
+		return confirmable.ConfirmationToken, nil
 	}
 }
 

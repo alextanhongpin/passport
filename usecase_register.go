@@ -12,8 +12,11 @@ type registerRepository interface {
 
 func NewRegister(users registerRepository) Register {
 	return func(ctx context.Context, cred Credential) (*User, error) {
-		if ok := cred.Valid(); !ok {
-			return nil, ErrInvalidCredential
+		if err := cred.Validate(); err != nil {
+			return nil, err
+			// NOTE: Do not leak error implementation here - do it
+			// in the model.
+			// return nil, ErrInvalidCredential
 		}
 		pwd, err := cred.Password.Encrypt()
 		if err != nil {

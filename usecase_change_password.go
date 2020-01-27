@@ -28,11 +28,11 @@ func (c *ChangePasswordRepository) UpdatePassword(ctx context.Context, userID, e
 
 func NewChangePassword(users changePasswordRepository) ChangePassword {
 	return func(ctx context.Context, currentUserID string, password, confirmPassword Password) error {
-		if !(password.Valid() && confirmPassword.Valid()) {
-			return ErrPasswordTooShort
+		if err := password.ValidateEqual(confirmPassword); err != nil {
+			return err
 		}
-		if equal := password.Equal(confirmPassword); !equal {
-			return ErrPasswordDoNotMatch
+		if err := password.Validate(); err != nil {
+			return err
 		}
 		if currentUserID == "" {
 			return ErrUserIDRequired
