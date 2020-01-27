@@ -4,10 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 )
 
-type Confirm func(ctx context.Context, token string) error
+type Confirm func(ctx context.Context, token Token) error
 
 type confirmRepository interface {
 	WithConfirmationToken(ctx context.Context, token string) (*User, error)
@@ -15,15 +14,23 @@ type confirmRepository interface {
 }
 
 func NewConfirm(users confirmRepository) Confirm {
-	return func(ctx context.Context, token string) error {
-		token = strings.TrimSpace(token)
-		if token == "" {
+	findUser := func(ctx context.Context, token Token) (*User, error) {
+		user, err := users.WithConfirmationToken(ctx, token.Value())
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+
+	return func(ctx context.Context, token Token) error {
+		if err := token.Validate(); err != nil {
 			return ErrTokenRequired
 		}
-		user, err := users.WithConfirmationToken(ctx, token)
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrTokenNotFound
-		}
+
+		user, err := findUser(ctx, token)
 		if err != nil {
 			return err
 		}

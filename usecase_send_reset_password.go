@@ -6,6 +6,7 @@ import (
 	"errors"
 )
 
+// TODO: Change to RequestResetPassword.
 type SendResetPassword func(ctx context.Context, email Email) (string, error)
 
 func NewSendResetPassword(users sendResetPasswordRepository) SendResetPassword {
@@ -14,14 +15,15 @@ func NewSendResetPassword(users sendResetPasswordRepository) SendResetPassword {
 			return "", err
 		}
 		recoverable := NewRecoverable()
-		success, err := users.UpdateRecoverable(ctx, email.Value(), recoverable)
+		_, err := users.UpdateRecoverable(ctx, email.Value(), recoverable)
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", ErrEmailNotFound
+			return "", ErrUserNotFound
 		}
 		if err != nil {
 			return "", err
 		}
 
+		// TODO: Allow token to be customized.
 		// Return enough data for us to send the email.
 		return recoverable.ResetPasswordToken, nil
 	}

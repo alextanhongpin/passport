@@ -24,8 +24,8 @@ func TestSendResetPasswordValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
-			res, err := sendResetPassword(&mockSendResetPasswordRepository{}, tt.email)
-			assert.Nil(res)
+			token, err := sendResetPassword(&mockSendResetPasswordRepository{}, tt.email)
+			assert.Equal("", token)
 			assert.Equal(tt.err, err)
 		})
 	}
@@ -33,21 +33,20 @@ func TestSendResetPasswordValidation(t *testing.T) {
 
 func TestSendResetPasswordNewEmail(t *testing.T) {
 	assert := assert.New(t)
-	res, err := sendResetPassword(&mockSendResetPasswordRepository{
+	token, err := sendResetPassword(&mockSendResetPasswordRepository{
 		updateRecoverableError: sql.ErrNoRows,
 	}, "john.doe@mail.com")
-	assert.Nil(res)
+	assert.Equal("", token)
 	assert.Equal(passport.ErrEmailNotFound, err)
 }
 
 func TestSendResetPasswordSuccess(t *testing.T) {
 	assert := assert.New(t)
-	res, err := sendResetPassword(&mockSendResetPasswordRepository{
+	token, err := sendResetPassword(&mockSendResetPasswordRepository{
 		updateRecoverableResponse: true,
 	}, "john.doe@mail.com")
 	assert.Nil(err)
-	assert.True(res.Success)
-	assert.True(len(res.Token) > 0)
+	assert.True(token != "")
 }
 
 type mockSendResetPasswordRepository struct {
@@ -59,9 +58,9 @@ func (m *mockSendResetPasswordRepository) UpdateRecoverable(ctx context.Context,
 	return m.updateRecoverableResponse, m.updateRecoverableError
 }
 
-func sendResetPassword(repo *mockSendResetPasswordRepository, email string) (*passport.SendResetPasswordResponse, error) {
+func sendResetPassword(repo *mockSendResetPasswordRepository, email string) (string, error) {
 	return passport.NewSendResetPassword(repo)(
 		context.TODO(),
-		passport.SendResetPasswordRequest{email},
+		passport.NewEmail(email),
 	)
 }

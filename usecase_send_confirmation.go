@@ -14,22 +14,36 @@ type sendConfirmationRepository interface {
 }
 
 func NewSendConfirmation(users sendConfirmationRepository) SendConfirmation {
+	findUser := func(ctx context.Context, email Email) (*User, error) {
+		user, err := users.WithEmail(ctx, email.Value())
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+
+	checkUserAlreadyVerified := func(confirmable Confirmable) error {
+		if verified := confirmable.IsVerified(); verified {
+			return ErrEmailVerified
+		}
+		return nil
+	}
+
 	return func(ctx context.Context, email Email) (string, error) {
 		if err := email.Validate(); err != nil {
 			return "", err
 		}
 
-		user, err := users.WithEmail(ctx, email.Value())
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", ErrEmailNotFound
-		}
+		user, err := findUser(ctx, email)
 		if err != nil {
 			return "", err
 		}
 
-		// Don't resend for users whose email is already confirmed.
-		if user.Confirmable.IsVerified() {
-			return "", ErrEmailVerified
+		if err := checkUserAlreadyVerified(user.Confirmable); err != nil {
+			return "", err
 		}
 
 		confirmable := NewConfirmable(email.Value())
@@ -37,6 +51,7 @@ func NewSendConfirmation(users sendConfirmationRepository) SendConfirmation {
 		if err != nil {
 			return "", err
 		}
+
 		// Return the confirmable in order to send the email.
 		return confirmable.ConfirmationToken, nil
 	}

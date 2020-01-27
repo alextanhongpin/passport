@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-type ChangePassword func(ctx context.Context, currentUserID string, password, confirmPassword Password) error
+type ChangePassword func(ctx context.Context, currentUserID UserID, password, confirmPassword Password) error
 
 type changePasswordRepository interface {
 	Find(ctx context.Context, id string) (*User, error)
@@ -27,33 +27,56 @@ func (c *ChangePasswordRepository) UpdatePassword(ctx context.Context, userID, e
 }
 
 func NewChangePassword(users changePasswordRepository) ChangePassword {
-	return func(ctx context.Context, currentUserID string, password, confirmPassword Password) error {
+	validate := func(userID UserID, password, confirmPassword Password) error {
 		if err := password.ValidateEqual(confirmPassword); err != nil {
 			return err
 		}
 		if err := password.Validate(); err != nil {
 			return err
 		}
-		if currentUserID == "" {
-			return ErrUserIDRequired
+		if err := userID.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	findUser := func(ctx context.Context, userID UserID) (*User, error) {
+		user, err := users.Find(ctx, userID.Value())
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+
+	checkPasswordNotUsed := func(encrypted SecurePassword, plainText Password) error {
+		if match := encrypted.Compare(plainText); match {
+			return ErrPasswordUsed
+		}
+		return nil
+	}
+
+	return func(ctx context.Context, currentUserID UserID, password, confirmPassword Password) error {
+		if err := validate(currentUserID, password, confirmPassword); err != nil {
+			return err
 		}
 
-		user, err := users.Find(ctx, currentUserID)
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrUserNotFound
-		}
+		user, err := findUser(ctx, currentUserID)
 		if err != nil {
 			return err
 		}
 
-		if match := SecurePassword(user.EncryptedPassword).Compare(password); match {
-			return ErrPasswordUsed
+		if err := checkPasswordNotUsed(SecurePassword(user.EncryptedPassword), password); err != nil {
+			return err
 		}
+
 		securePwd, err := password.Encrypt()
 		if err != nil {
 			return err
 		}
-		_, err = users.UpdatePassword(ctx, currentUserID, securePwd.Value())
+		_, err = users.UpdatePassword(ctx, currentUserID.Value(), securePwd.Value())
 		return err
 	}
 }

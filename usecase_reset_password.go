@@ -4,10 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 )
 
-type ResetPassword func(ctx context.Context, token string, password, confirmPassword Password) (*User, error)
+type ResetPassword func(ctx context.Context, token Token, password, confirmPassword Password) (*User, error)
 
 type resetPasswordRepository interface {
 	WithResetPasswordToken(ctx context.Context, token string) (*User, error)
@@ -16,39 +15,64 @@ type resetPasswordRepository interface {
 }
 
 func NewResetPassword(users resetPasswordRepository) ResetPassword {
-	return func(ctx context.Context, token string, password, confirmPassword Password) (*User, error) {
-		token = strings.TrimSpace(token)
-		if token == "" {
-			return nil, ErrTokenRequired
+	validate := func(token Token, password, confirmPassword Password) error {
+		if err := token.Validate(); err != nil {
+			return err
 		}
 		if err := password.ValidateEqual(confirmPassword); err != nil {
-			return nil, err
+			return err
 		}
 		if err := password.Validate(); err != nil {
-			return nil, err
+			return err
 		}
+		return nil
+	}
 
-		user, err := users.WithResetPasswordToken(ctx, token)
+	findUser := func(ctx context.Context, token Token) (*User, error) {
+		user, err := users.WithResetPasswordToken(ctx, token.Value())
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrTokenNotFound
+			return nil, ErrUserNotFound
 		}
 		if err != nil {
 			return nil, err
 		}
-		if !user.Recoverable.IsValid() {
-			return nil, ErrTokenExpired
+		return user, nil
+	}
+
+	checkCanResetPassword := func(recoverable Recoverable) error {
+		if !recoverable.IsValid() {
+			return ErrTokenExpired
 		}
-		if !user.Recoverable.AllowPasswordChange {
-			return nil, ErrPasswordChangeNotAllowed
+		if !recoverable.AllowPasswordChange {
+			return ErrPasswordChangeNotAllowed
 		}
-		// NOTE: Must email be verified first? Not really...user might not
-		// verified their account for a long time.
-		// if user.EmailVerified {
-		//         return nil, ErrConfirmationRequired
-		// }
-		// Password must not be the same as the old passwords.
-		if match := SecurePassword(user.EncryptedPassword).Compare(password); match {
-			return nil, ErrPasswordUsed
+		return nil
+	}
+
+	checkPasswordNotReused := func(encrypted SecurePassword, password Password) error {
+		if match := encrypted.Compare(password); match {
+			return ErrPasswordUsed
+		}
+		return nil
+	}
+
+	return func(ctx context.Context, token Token, password, confirmPassword Password) (*User, error) {
+		if err := validate(token, password, confirmPassword); err != nil {
+			return nil, err
+		}
+		user, err := findUser(ctx, token)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := checkCanResetPassword(user.Recoverable); err != nil {
+			return nil, err
+		}
+		if err := checkPasswordNotReused(
+			SecurePassword(user.EncryptedPassword),
+			password,
+		); err != nil {
+			return nil, err
 		}
 
 		securePwd, err := password.Encrypt()
@@ -57,18 +81,18 @@ func NewResetPassword(users resetPasswordRepository) ResetPassword {
 		}
 
 		var (
-			userID    = strings.TrimSpace(user.ID)
+			userID    = UserIDFactory().FromString(user.ID)
 			userEmail = NewEmail(user.Email)
 		)
-		if userID == "" {
-			return nil, ErrUserIDRequired
+		if err := userID.Validate(); err != nil {
+			return nil, err
 		}
 		if err := userEmail.Validate(); err != nil {
 			return nil, err
 		}
 
 		// TODO: Wrap in transactions.
-		_, err = users.UpdatePassword(ctx, userID, securePwd.Value())
+		_, err = users.UpdatePassword(ctx, userID.Value(), securePwd.Value())
 		if err != nil {
 			return nil, err
 		}

@@ -25,7 +25,7 @@ func TestConfirmNewToken(t *testing.T) {
 	err := confirm(&mockConfirmRepository{
 		withConfirmationTokenError: sql.ErrNoRows,
 	}, token)
-	assert.Equal(err, passport.ErrTokenNotFound)
+	assert.Equal(err, passport.ErrUserNotFound)
 }
 
 func TestConfirmTokenExpired(t *testing.T) {

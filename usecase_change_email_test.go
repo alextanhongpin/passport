@@ -107,7 +107,7 @@ func (m *mockChangeEmailRepository) UpdateConfirmable(ctx context.Context, email
 func changeEmail(repo *mockChangeEmailRepository, userID, email string) (string, error) {
 	return passport.NewChangeEmail(repo)(
 		context.TODO(),
-		userID,
+		passport.UserID(userID),
 		passport.NewEmail(email),
 	)
 }

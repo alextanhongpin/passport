@@ -13,31 +13,31 @@ import (
 func TestSendConfirmationValidation(t *testing.T) {
 	t.Run("when email is not provided", func(t *testing.T) {
 		assert := assert.New(t)
-		res, err := sendConfirmation(&mockSendConfirmationRepository{}, "   ")
-		assert.Nil(res)
+		token, err := sendConfirmation(&mockSendConfirmationRepository{}, "   ")
+		assert.Equal("", token)
 		assert.Equal(passport.ErrEmailRequired, err)
 	})
 
 	t.Run("when email is invalid", func(t *testing.T) {
 		assert := assert.New(t)
-		res, err := sendConfirmation(&mockSendConfirmationRepository{}, "john.d   ")
-		assert.Nil(res)
+		token, err := sendConfirmation(&mockSendConfirmationRepository{}, "john.d   ")
+		assert.Equal("", token)
 		assert.Equal(passport.ErrEmailInvalid, err)
 	})
 }
 
 func TestSendConfirmationEmailNewEmail(t *testing.T) {
 	assert := assert.New(t)
-	res, err := sendConfirmation(&mockSendConfirmationRepository{
+	token, err := sendConfirmation(&mockSendConfirmationRepository{
 		withEmailError: sql.ErrNoRows,
 	}, "john.doe@mail.com")
-	assert.Nil(res)
+	assert.Equal("", token)
 	assert.Equal(passport.ErrEmailNotFound, err)
 }
 
 func TestSendConfirmationEmailAlreadyVerified(t *testing.T) {
 	assert := assert.New(t)
-	res, err := sendConfirmation(&mockSendConfirmationRepository{
+	token, err := sendConfirmation(&mockSendConfirmationRepository{
 		withEmailResponse: &passport.User{
 			Confirmable: passport.Confirmable{
 				ConfirmedAt:      time.Now(),
@@ -45,13 +45,13 @@ func TestSendConfirmationEmailAlreadyVerified(t *testing.T) {
 			},
 		},
 	}, "john.doe@mail.com")
-	assert.Nil(res)
+	assert.Equal("", token)
 	assert.Equal(passport.ErrEmailVerified, err)
 }
 
 func TestSendConfirmationEmailSuccess(t *testing.T) {
 	assert := assert.New(t)
-	res, err := sendConfirmation(&mockSendConfirmationRepository{
+	token, err := sendConfirmation(&mockSendConfirmationRepository{
 		withEmailResponse: &passport.User{
 			Confirmable: passport.Confirmable{
 				UnconfirmedEmail: "",
@@ -60,8 +60,7 @@ func TestSendConfirmationEmailSuccess(t *testing.T) {
 		updateConfirmableResponse: true,
 	}, "john.doe@mail.com")
 	assert.Nil(err)
-	assert.True(res.Success)
-	assert.True(res.Token != "")
+	assert.True(token != "")
 }
 
 type mockSendConfirmationRepository struct {
@@ -79,9 +78,9 @@ func (m *mockSendConfirmationRepository) UpdateConfirmable(ctx context.Context, 
 	return m.updateConfirmableResponse, m.updateConfirmableError
 }
 
-func sendConfirmation(repo *mockSendConfirmationRepository, email string) (*passport.SendConfirmationResponse, error) {
+func sendConfirmation(repo *mockSendConfirmationRepository, email string) (string, error) {
 	return passport.NewSendConfirmation(repo)(
 		context.TODO(),
-		passport.SendConfirmationRequest{email},
+		passport.NewEmail(email),
 	)
 }

@@ -5,10 +5,12 @@ import (
 	"strings"
 )
 
+// TODO: Separate model errors and application errors, and place errors in
+// models. Have a method Valid() that returns bool, and another method
+// Validate() that returns error.
 var (
 	ErrEmailExists            = errors.New("email exists")
 	ErrEmailInvalid           = errors.New("email invalid")
-	ErrEmailNotFound          = errors.New("email not found")
 	ErrEmailOrPasswordInvalid = errors.New("email or password is invalid")
 	ErrEmailRequired          = errors.New("email required")
 	ErrEmailVerified          = errors.New("email verified")

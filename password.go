@@ -2,8 +2,6 @@ package passport
 
 import (
 	"errors"
-
-	"github.com/alextanhongpin/passwd"
 )
 
 var (
@@ -14,12 +12,13 @@ var (
 	ErrPasswordUsed             = errors.New("password cannot be reused")
 )
 
-const MinPasswordLength = 6
+// TODO: Change password min length requirements to be 8.
+const MinPasswordLength = 8
 
 type Password string
 
 func (p Password) Valid() bool {
-	return len(p.Value()) >= MinPasswordLength
+	return !(len(p.Value()) < MinPasswordLength)
 }
 
 func (p Password) Validate() error {
@@ -53,23 +52,4 @@ func (p Password) ValidateEqual(pwd Password) error {
 
 func NewPassword(password string) Password {
 	return Password(password)
-}
-
-type SecurePassword string
-
-func (s SecurePassword) Compare(password Password) bool {
-	match, _ := passwd.Compare(password.Value(), s.Value())
-	return match
-}
-
-func (s SecurePassword) String() string {
-	return string(s)
-}
-func (s SecurePassword) Value() string {
-	return string(s)
-}
-
-func NewSecurePassword(password string) (SecurePassword, error) {
-	cipher, err := passwd.Encrypt(password)
-	return SecurePassword(cipher), err
 }

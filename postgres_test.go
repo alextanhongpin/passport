@@ -191,7 +191,7 @@ func (suite *TestAuthenticateSuite) TestLoginNewUser() {
 
 	res, err := suite.login(context.TODO(), cred)
 	suite.Nil(res)
-	suite.Equal(passport.ErrEmailNotFound, err)
+	suite.Equal(passport.ErrUserNotFound, err)
 }
 
 func (suite *TestAuthenticateSuite) TestRegisterNewUser() {
