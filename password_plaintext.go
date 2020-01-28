@@ -2,12 +2,12 @@ package passport
 
 var minPasswordLen = 8
 
-type EncryptionAlgorithm func(plainText string) (SecurePassword, error)
+type encryptionAlgorithm func(plainText string) (SecurePassword, error)
 
 type PlainTextPassword struct {
 	minLength int
 	value     string
-	hasher    EncryptionAlgorithm
+	hasher    encryptionAlgorithm
 }
 
 func (p *PlainTextPassword) Valid() bool {
@@ -47,7 +47,7 @@ func MinLength(len int) PlainTextPasswordOption {
 	}
 }
 
-func Hasher(hasher EncryptionAlgorithm) PlainTextPasswordOption {
+func Hasher(hasher encryptionAlgorithm) PlainTextPasswordOption {
 	return func(pwd *PlainTextPassword) {
 		pwd.hasher = hasher
 	}

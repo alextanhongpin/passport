@@ -11,7 +11,7 @@ func (a *Argon2Password) Value() string {
 }
 
 func (a *Argon2Password) Compare(pwd Password) error {
-	match, err := passwd.Compare(pwd.Value(), a.Value())
+	match, err := passwd.Compare(a.Value(), []byte(pwd.Value()))
 	if err != nil {
 		return err
 	}
