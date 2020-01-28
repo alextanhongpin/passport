@@ -93,12 +93,12 @@ func TestResetPasswordSamePassword(t *testing.T) {
 		password        = "12345678"
 		confirmPassword = "12345678"
 	)
-	encrypted, err := passwd.Encrypt(password)
+	encrypted, err := passwd.Encrypt([]byte(password))
 	assert.Nil(err)
 
 	res, err := resetPassword(&mockResetPasswordRepository{
 		withResetPasswordTokenResponse: &passport.User{
-			EncryptedPassword: encrypted,
+			EncryptedPassword: passport.NewArgon2Password(encrypted),
 			Recoverable: passport.Recoverable{
 				ResetPasswordSentAt: time.Now(),
 				AllowPasswordChange: true,
@@ -118,14 +118,14 @@ func TestResetPasswordSuccess(t *testing.T) {
 		oldPassword     = "87654321"
 	)
 
-	encrypted, err := passwd.Encrypt(oldPassword)
+	encrypted, err := passwd.Encrypt([]byte(oldPassword))
 	assert.Nil(err)
 
 	res, err := resetPassword(&mockResetPasswordRepository{
 		withResetPasswordTokenResponse: &passport.User{
 			ID:                "123",
 			Email:             "john.doe@mail.com",
-			EncryptedPassword: encrypted,
+			EncryptedPassword: passport.NewArgon2Password(encrypted),
 			Recoverable: passport.Recoverable{
 				ResetPasswordSentAt: time.Now(),
 				AllowPasswordChange: true,

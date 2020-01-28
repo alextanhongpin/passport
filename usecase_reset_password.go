@@ -106,7 +106,7 @@ func (r *ResetPassword) checkCanResetPassword(recoverable Recoverable) error {
 }
 
 func (r *ResetPassword) checkPasswordNotReused(encrypted SecurePassword, password Password) error {
-	if err := encrypted.Compare(password); err != nil {
+	if err := encrypted.Compare(password); err == nil {
 		return ErrPasswordUsed
 	}
 	return nil

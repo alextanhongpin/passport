@@ -26,6 +26,6 @@ func NewArgon2Password(cipher string) *Argon2Password {
 }
 
 func Argon2Factory(password string) (SecurePassword, error) {
-	cipher, err := passwd.Encrypt(password)
+	cipher, err := passwd.Encrypt([]byte(password))
 	return &Argon2Password{value: cipher}, err
 }

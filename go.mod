@@ -6,7 +6,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/alextanhongpin/passwd v0.0.4
+	github.com/alextanhongpin/passwd v0.0.5
 	github.com/alextanhongpin/pkg v0.0.4
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/containerd/continuity v0.0.0-20191127005431-f65d91d395eb // indirect

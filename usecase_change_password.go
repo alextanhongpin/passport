@@ -69,7 +69,7 @@ func (c *ChangePassword) findUser(ctx context.Context, userID UserID) (*User, er
 }
 
 func (c *ChangePassword) checkPasswordNotUsed(encrypted SecurePassword, plainText Password) error {
-	if err := encrypted.Compare(plainText); err != nil {
+	if err := encrypted.Compare(plainText); err == nil {
 		return ErrPasswordUsed
 	}
 	return nil

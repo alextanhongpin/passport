@@ -203,11 +203,12 @@ func getUser(db *sql.DB, stmt string, arguments ...interface{}) (*User, error) {
 	var u User
 	var resetPasswordToken, confirmationToken sql.NullString
 	var resetPasswordSentAt, confirmationSentAt, confirmedAt sql.NullTime
+	var encryptedPassword string
 	if err := db.QueryRow(stmt, arguments...).Scan(
 		&u.ID,
 		&u.CreatedAt,
 		&u.Email,
-		&u.EncryptedPassword,
+		&encryptedPassword,
 		&resetPasswordToken,
 		&resetPasswordSentAt,
 		&u.Recoverable.AllowPasswordChange,
@@ -234,5 +235,6 @@ func getUser(db *sql.DB, stmt string, arguments ...interface{}) (*User, error) {
 	if confirmedAt.Valid {
 		u.Confirmable.ConfirmedAt = confirmedAt.Time
 	}
+	u.EncryptedPassword = NewArgon2Password(encryptedPassword)
 	return &u, nil
 }

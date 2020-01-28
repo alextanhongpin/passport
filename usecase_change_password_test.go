@@ -57,12 +57,12 @@ func TestChangePasswordSamePassword(t *testing.T) {
 		password        = "12345678"
 		confirmPassword = "12345678"
 	)
-	encryptedPassword, err := passwd.Encrypt(password)
+	encryptedPassword, err := passwd.Encrypt([]byte(password))
 	assert.Nil(err)
 
 	repo := &mockChangePasswordRepository{
 		findResponse: &passport.User{
-			EncryptedPassword: encryptedPassword,
+			EncryptedPassword: passport.NewArgon2Password(encryptedPassword),
 		},
 	}
 	err = changePassword(repo, userID, password, confirmPassword)
@@ -77,13 +77,13 @@ func TestChangePasswordSuccess(t *testing.T) {
 		newPassword     = "87654321"
 		confirmPassword = "87654321"
 	)
-	encryptedPassword, err := passwd.Encrypt(oldPassword)
+	encryptedPassword, err := passwd.Encrypt([]byte(oldPassword))
 	assert.Nil(err)
 
 	repo := &mockChangePasswordRepository{
 		findResponse: &passport.User{
 			ID:                userID,
-			EncryptedPassword: encryptedPassword,
+			EncryptedPassword: passport.NewArgon2Password(encryptedPassword),
 		},
 		updatePasswordResponse: true,
 	}
