@@ -7,16 +7,22 @@ import (
 )
 
 type (
-	login interface {
-		Exec(context.Context, Credential) (*User, error)
-	}
-
 	loginRepository interface {
 		WithEmail(ctx context.Context, email string) (*User, error)
 	}
 
+	LoginOptions struct {
+		Repository loginRepository
+		Comparer   PasswordComparer
+	}
+
+	// Options are good, since we don't need to care about the sequence,
+	// and we can easily reuse them by mocking part of them. They can also
+	// separate private methods from dependencies injection.
+	// An added advantage is it becomes easier to decorate dependencies,
+	// and simplify factory methods.
 	Login struct {
-		users loginRepository
+		options LoginOptions
 	}
 )
 
@@ -50,7 +56,7 @@ func (l *Login) validate(cred Credential) error {
 }
 
 func (l *Login) findUser(ctx context.Context, email Email) (*User, error) {
-	user, err := l.users.WithEmail(ctx, email.Value())
+	user, err := l.options.Repository.WithEmail(ctx, email.Value())
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}
@@ -60,8 +66,11 @@ func (l *Login) findUser(ctx context.Context, email Email) (*User, error) {
 	return user, nil
 }
 
-func (l *Login) checkPasswordMatch(encrypted SecurePassword, password Password) error {
-	if err := encrypted.Compare(password); err != nil {
+func (l *Login) checkPasswordMatch(cipherText, plainText Password) error {
+	if err := l.options.Comparer.Compare(
+		cipherText.Byte(),
+		plainText.Byte(),
+	); err != nil {
 		return ErrEmailOrPasswordInvalid
 	}
 	return nil
@@ -71,6 +80,6 @@ func (l *Login) checkUserConfirmed(confirmable Confirmable) error {
 	return confirmable.ValidateConfirmed()
 }
 
-func NewLogin(repository loginRepository) *Login {
-	return &Login{repository}
+func NewLogin(options LoginOptions) *Login {
+	return &Login{options}
 }

@@ -156,15 +156,43 @@ type TestAuthenticateSuite struct {
 
 func (suite *TestAuthenticateSuite) SetupSuite() {
 	suite.db = database.DB()
+
+	a2 := passport.NewArgon2Password()
+
 	suite.repository = passport.NewPostgres(suite.db)
-	suite.confirm = passport.NewConfirm(suite.repository)
-	suite.login = passport.NewLogin(suite.repository)
-	suite.register = passport.NewRegister(suite.repository)
-	suite.sendConfirmation = passport.NewSendConfirmation(suite.repository)
-	suite.changePassword = passport.NewChangePassword(suite.repository)
-	suite.requestResetPassword = passport.NewRequestResetPassword(suite.repository)
-	suite.resetPassword = passport.NewResetPassword(suite.repository)
-	suite.changeEmail = passport.NewChangeEmail(suite.repository)
+	suite.confirm = passport.NewConfirm(passport.ConfirmOptions{Repository: suite.repository})
+	suite.login = passport.NewLogin(
+		passport.LoginOptions{
+			Repository: suite.repository,
+			Comparer:   a2,
+		},
+	)
+	suite.register = passport.NewRegister(
+		passport.RegisterOptions{Repository: suite.repository, Encoder: a2},
+	)
+	suite.sendConfirmation = passport.NewSendConfirmation(
+		passport.SendConfirmationOptions{Repository: suite.repository},
+	)
+	suite.changePassword = passport.NewChangePassword(
+		passport.ChangePasswordOptions{
+			Repository:      suite.repository,
+			EncoderComparer: a2,
+		},
+	)
+	suite.requestResetPassword = passport.NewRequestResetPassword(
+		passport.RequestResetPasswordOptions{
+			Repository: suite.repository,
+		},
+	)
+	suite.resetPassword = passport.NewResetPassword(
+		passport.ResetPasswordOptions{
+			Repository:      suite.repository,
+			EncoderComparer: a2,
+		},
+	)
+	suite.changeEmail = passport.NewChangeEmail(
+		passport.ChangeEmailOptions{Repository: suite.repository},
+	)
 }
 
 func (suite *TestAuthenticateSuite) SetupTest() {
@@ -226,7 +254,7 @@ func (suite *TestAuthenticateSuite) TestLoginRegisteredUserConfirmed() {
 
 func (suite *TestAuthenticateSuite) TestLoginWrongPassword() {
 	cred := suite.cred
-	cred.Password = passport.NewPlainTextPassword("87654321")
+	cred.Password = passport.NewPassword("87654321")
 	user, err := suite.login.Exec(context.TODO(), cred)
 	suite.Nil(user)
 	suite.NotNil(err)
@@ -236,7 +264,7 @@ func (suite *TestAuthenticateSuite) TestLoginWrongPassword() {
 func (suite *TestAuthenticateSuite) TestChangePassword() {
 	var (
 		email    = passport.NewEmail("john.doe@mail.com")
-		password = passport.NewPlainTextPassword("newpass12")
+		password = passport.NewPassword("newpass12")
 	)
 	confirmFn(suite, email)
 	err := suite.changePassword.Exec(
@@ -253,7 +281,7 @@ func (suite *TestAuthenticateSuite) TestChangePassword() {
 func (suite *TestAuthenticateSuite) TestResetPassword() {
 	var (
 		email    = passport.NewEmail("john.doe@mail.com")
-		password = passport.NewPlainTextPassword("87654321")
+		password = passport.NewPassword("87654321")
 	)
 	confirmFn(suite, email)
 	token, err := suite.requestResetPassword.Exec(
@@ -278,7 +306,7 @@ func (suite *TestAuthenticateSuite) TestResetPassword() {
 func (suite *TestAuthenticateSuite) TestChangeEmail() {
 	var (
 		newEmail = passport.NewEmail("jane.doe@mail.com")
-		password = passport.NewPlainTextPassword("12345678")
+		password = passport.NewPassword("12345678")
 	)
 	token, err := suite.changeEmail.Exec(
 		context.TODO(),

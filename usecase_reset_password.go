@@ -7,20 +7,21 @@ import (
 )
 
 type (
-	resetPassword interface {
-		Exec(ctx context.Context, token Token, password, confirmPassword Password) (*User, error)
-	}
-
 	resetPasswordRepository interface {
 		WithResetPasswordToken(ctx context.Context, token string) (*User, error)
 		UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error)
 		UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
 	}
-)
 
-type ResetPassword struct {
-	users resetPasswordRepository
-}
+	ResetPasswordOptions struct {
+		Repository      resetPasswordRepository
+		EncoderComparer PasswordEncoderComparer
+	}
+
+	ResetPassword struct {
+		options ResetPasswordOptions
+	}
+)
 
 func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirmPassword Password) (*User, error) {
 	if err := r.validate(token, password, confirmPassword); err != nil {
@@ -41,7 +42,7 @@ func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirm
 		return nil, err
 	}
 
-	securePwd, err := password.Encrypt()
+	cipherText, err := r.options.EncoderComparer.Encode(password.Byte())
 	if err != nil {
 		return nil, err
 	}
@@ -58,13 +59,13 @@ func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirm
 	}
 
 	// TODO: Wrap in transactions.
-	_, err = r.users.UpdatePassword(ctx, userID.Value(), securePwd.Value())
+	_, err = r.options.Repository.UpdatePassword(ctx, userID.Value(), cipherText)
 	if err != nil {
 		return nil, err
 	}
 
 	var recoverable Recoverable
-	_, err = r.users.UpdateRecoverable(ctx, userEmail.Value(), recoverable)
+	_, err = r.options.Repository.UpdateRecoverable(ctx, userEmail.Value(), recoverable)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +86,7 @@ func (r *ResetPassword) validate(token Token, password, confirmPassword Password
 }
 
 func (r *ResetPassword) findUser(ctx context.Context, token Token) (*User, error) {
-	user, err := r.users.WithResetPasswordToken(ctx, token.Value())
+	user, err := r.options.Repository.WithResetPasswordToken(ctx, token.Value())
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}
@@ -105,31 +106,16 @@ func (r *ResetPassword) checkCanResetPassword(recoverable Recoverable) error {
 	return nil
 }
 
-func (r *ResetPassword) checkPasswordNotReused(encrypted SecurePassword, password Password) error {
-	if err := encrypted.Compare(password); err == nil {
+func (r *ResetPassword) checkPasswordNotReused(cipherText, plainText Password) error {
+	if err := r.options.EncoderComparer.Compare(
+		cipherText.Byte(),
+		plainText.Byte(),
+	); err == nil {
 		return ErrPasswordUsed
 	}
 	return nil
 }
 
-type ResetPasswordRepository struct {
-	WithResetPasswordTokenFunc WithResetPasswordToken
-	UpdatePasswordFunc         UpdatePassword
-	UpdateRecoverableFunc      UpdateRecoverable
-}
-
-func (r *ResetPasswordRepository) WithResetPasswordToken(ctx context.Context, token string) (*User, error) {
-	return r.WithResetPasswordTokenFunc(ctx, token)
-}
-
-func (r *ResetPasswordRepository) UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error) {
-	return r.UpdatePasswordFunc(ctx, userID, encryptedPassword)
-}
-
-func (r *ResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
-	return r.UpdateRecoverableFunc(ctx, email, recoverable)
-}
-
-func NewResetPassword(repository resetPasswordRepository) *ResetPassword {
-	return &ResetPassword{repository}
+func NewResetPassword(options ResetPasswordOptions) *ResetPassword {
+	return &ResetPassword{options}
 }

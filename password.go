@@ -13,14 +13,72 @@ var (
 	ErrPasswordInvalid          = errors.New("password invalid")
 )
 
-type Password interface {
-	Encrypt() (SecurePassword, error)
-	Equal(Password) error
-	Validate() error
-	Valid() bool
-	Value() string
+const PasswordMinLen = 8
+
+type (
+	PasswordEncoder interface {
+		Encode(password []byte) (string, error)
+	}
+
+	PasswordComparer interface {
+		Compare(hash, password []byte) error
+	}
+
+	PasswordEncoderComparer interface {
+		PasswordEncoder
+		PasswordComparer
+	}
+)
+
+type Password struct {
+	minLen   int
+	password string
 }
 
-func NewPassword(password string) Password {
-	return NewPlainTextPassword(password)
+func (p Password) longEnough() bool {
+	return len(p.Value()) >= p.minLen
+}
+
+func (p Password) Validate() error {
+	if p.Value() == "" {
+		return ErrPasswordRequired
+	}
+	if ok := p.longEnough(); !ok {
+		return ErrPasswordTooShort
+	}
+	return nil
+}
+
+func (p Password) Value() string {
+	return p.password
+}
+
+func (p Password) Byte() []byte {
+	return []byte(p.password)
+}
+
+func (p Password) Equal(pwd Password) error {
+	if p.Value() == pwd.Value() {
+		return nil
+	}
+	return ErrPasswordDoNotMatch
+}
+
+type PasswordOption func(p *Password)
+
+func MinLen(len int) PasswordOption {
+	return func(pwd *Password) {
+		pwd.minLen = len
+	}
+}
+
+func NewPassword(password string, opts ...PasswordOption) Password {
+	pwd := Password{
+		password: password,
+		minLen:   PasswordMinLen,
+	}
+	for _, opt := range opts {
+		opt(&pwd)
+	}
+	return pwd
 }

@@ -9,10 +9,10 @@ var ErrUserNotFound = errors.New("user not found")
 
 // User represents the authenticatable Entity.
 type User struct {
-	ID                string         `json:"id,omitempty"`
-	CreatedAt         time.Time      `json:"created_at,omitempty"`
-	Email             string         `json:"email,omitempty"`
-	EncryptedPassword SecurePassword `json:"encrypted_password,omitempty"`
+	ID                string    `json:"id,omitempty"`
+	CreatedAt         time.Time `json:"created_at,omitempty"`
+	Email             string    `json:"email,omitempty"`
+	EncryptedPassword Password  `json:"encrypted_password,omitempty"`
 
 	// Allow account to be recovered by resetting the password.
 	Recoverable

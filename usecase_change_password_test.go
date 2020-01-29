@@ -62,7 +62,7 @@ func TestChangePasswordSamePassword(t *testing.T) {
 
 	repo := &mockChangePasswordRepository{
 		findResponse: &passport.User{
-			EncryptedPassword: passport.NewArgon2Password(encryptedPassword),
+			EncryptedPassword: passport.NewPassword(encryptedPassword),
 		},
 	}
 	err = changePassword(repo, userID, password, confirmPassword)
@@ -83,7 +83,7 @@ func TestChangePasswordSuccess(t *testing.T) {
 	repo := &mockChangePasswordRepository{
 		findResponse: &passport.User{
 			ID:                userID,
-			EncryptedPassword: passport.NewArgon2Password(encryptedPassword),
+			EncryptedPassword: passport.NewPassword(encryptedPassword),
 		},
 		updatePasswordResponse: true,
 	}
@@ -106,8 +106,15 @@ func (m *mockChangePasswordRepository) UpdatePassword(ctx context.Context, userI
 	return m.updatePasswordResponse, m.updatePasswordError
 }
 
-func changePassword(repo *mockChangePasswordRepository, userID, password, confirmPassword string) error {
-	return passport.NewChangePassword(repo).Exec(
+func changePasswordOptions(r *mockChangePasswordRepository) passport.ChangePasswordOptions {
+	return passport.ChangePasswordOptions{
+		Repository:      r,
+		EncoderComparer: passport.NewArgon2Password(),
+	}
+}
+
+func changePassword(r *mockChangePasswordRepository, userID, password, confirmPassword string) error {
+	return passport.NewChangePassword(changePasswordOptions(r)).Exec(
 		context.TODO(),
 		passport.NewUserID(userID),
 		passport.NewPassword(password),

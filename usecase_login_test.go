@@ -27,7 +27,10 @@ func TestLoginValidation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := login(&mockLoginRepository{}, tt.email, tt.password)
+			res, err := login(
+				&mockLoginRepository{},
+				tt.email,
+				tt.password)
 			assert.Nil(res)
 			assert.Equal(tt.err, err)
 		})
@@ -51,15 +54,16 @@ func TestLoginExistingUser(t *testing.T) {
 
 	var (
 		email    = "john.doe@mail.com"
-		password = passport.NewPlainTextPassword("12345678")
+		password = passport.NewPassword("12345678")
 	)
-	encrypted, err := password.Encrypt()
+	a2 := passport.NewArgon2Password()
+	encrypted, err := a2.Encode(password.Byte())
 	assert.Nil(err)
 
 	repo := &mockLoginRepository{
 		User: &passport.User{
 			Email:             email,
-			EncryptedPassword: encrypted,
+			EncryptedPassword: passport.NewPassword(encrypted),
 			Confirmable: passport.Confirmable{
 				ConfirmedAt: time.Now(),
 			},
@@ -71,7 +75,6 @@ func TestLoginExistingUser(t *testing.T) {
 		user, err := login(repo, email, password.Value())
 		assert.Nil(err)
 		assert.Equal(email, user.Email)
-		assert.Nil(user.EncryptedPassword.Compare(password))
 	})
 
 	t.Run("when password is incorrect", func(t *testing.T) {
@@ -90,8 +93,19 @@ func (m *mockLoginRepository) WithEmail(ctx context.Context, email string) (*pas
 	return m.User, m.Err
 }
 
-func login(repo *mockLoginRepository, email, password string) (*passport.User, error) {
-	return passport.NewLogin(repo).Exec(
+func loginOptions(r *mockLoginRepository) passport.LoginOptions {
+	return passport.LoginOptions{
+		Repository: r,
+		Comparer:   passport.NewArgon2Password(),
+	}
+}
+
+func login(
+	r *mockLoginRepository,
+	email, password string,
+) (*passport.User, error) {
+	svc := passport.NewLogin(loginOptions(r))
+	return svc.Exec(
 		context.TODO(),
 		passport.NewCredential(email, password),
 	)

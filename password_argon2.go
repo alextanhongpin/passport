@@ -3,15 +3,10 @@ package passport
 import "github.com/alextanhongpin/passwd"
 
 type Argon2Password struct {
-	value string
 }
 
-func (a *Argon2Password) Value() string {
-	return string(a.value)
-}
-
-func (a *Argon2Password) Compare(pwd Password) error {
-	match, err := passwd.Compare(a.Value(), []byte(pwd.Value()))
+func (a *Argon2Password) Compare(cipherText, plainText []byte) error {
+	match, err := passwd.Compare(string(cipherText), plainText)
 	if err != nil {
 		return err
 	}
@@ -21,11 +16,11 @@ func (a *Argon2Password) Compare(pwd Password) error {
 	return nil
 }
 
-func NewArgon2Password(cipher string) *Argon2Password {
-	return &Argon2Password{value: cipher}
+func (a *Argon2Password) Encode(plainText []byte) (string, error) {
+	cipherText, err := passwd.Encrypt(plainText)
+	return cipherText, err
 }
 
-func Argon2Factory(password string) (SecurePassword, error) {
-	cipher, err := passwd.Encrypt([]byte(password))
-	return &Argon2Password{value: cipher}, err
+func NewArgon2Password() *Argon2Password {
+	return &Argon2Password{}
 }

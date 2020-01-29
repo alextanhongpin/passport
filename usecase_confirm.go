@@ -7,22 +7,22 @@ import (
 )
 
 type (
-	confirm interface {
-		Exec(ctx context.Context, token Token) error
-	}
-
 	confirmRepository interface {
 		WithConfirmationToken(ctx context.Context, token string) (*User, error)
 		UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
 	}
 
+	ConfirmOptions struct {
+		Repository confirmRepository
+	}
+
 	Confirm struct {
-		users confirmRepository
+		options ConfirmOptions
 	}
 )
 
 func (c *Confirm) findUser(ctx context.Context, token Token) (*User, error) {
-	user, err := c.users.WithConfirmationToken(ctx, token.Value())
+	user, err := c.options.Repository.WithConfirmationToken(ctx, token.Value())
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}
@@ -63,23 +63,10 @@ func (c *Confirm) Exec(ctx context.Context, token Token) error {
 	}
 
 	var confirmable Confirmable
-	_, err = c.users.UpdateConfirmable(ctx, email.Value(), confirmable)
+	_, err = c.options.Repository.UpdateConfirmable(ctx, email.Value(), confirmable)
 	return err
 }
 
-type ConfirmRepository struct {
-	WithConfirmationTokenFunc WithConfirmationToken
-	UpdateConfirmableFunc     UpdateConfirmable
-}
-
-func (c *ConfirmRepository) WithConfirmationToken(ctx context.Context, token string) (*User, error) {
-	return c.WithConfirmationTokenFunc(ctx, token)
-}
-
-func (c *ConfirmRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
-	return c.UpdateConfirmableFunc(ctx, email, confirmable)
-}
-
-func NewConfirm(repository confirmRepository) *Confirm {
-	return &Confirm{repository}
+func NewConfirm(options ConfirmOptions) *Confirm {
+	return &Confirm{options}
 }

@@ -15,14 +15,14 @@ import (
 )
 
 type Service interface {
-	Login(ctx context.Context, req passport.LoginRequest) (*passport.LoginResponse, error)
-	Register(ctx context.Context, req passport.RegisterRequest) (*passport.RegisterResponse, error)
-	ChangeEmail(ctx context.Context, req passport.ChangeEmailRequest) (*passport.ChangeEmailResponse, error)
-	ChangePassword(ctx context.Context, req passport.ChangePasswordRequest) (*passport.ChangePasswordResponse, error)
-	Confirm(ctx context.Context, req passport.ConfirmRequest) (*passport.ConfirmResponse, error)
-	ResetPassword(ctx context.Context, req passport.ResetPasswordRequest) (*passport.ResetPasswordResponse, error)
-	SendConfirmation(ctx context.Context, req passport.SendConfirmationRequest) (*passport.SendConfirmationResponse, error)
-	SendResetPassword(ctx context.Context, req passport.SendResetPasswordRequest) (*passport.SendResetPasswordResponse, error)
+	Login(ctx context.Context, req LoginRequest) (*LoginResponse, error)
+	Register(ctx context.Context, req RegisterRequest) (*RegisterResponse, error)
+	ChangeEmail(ctx context.Context, req ChangeEmailRequest) (*ChangeEmailResponse, error)
+	ChangePassword(ctx context.Context, req ChangePasswordRequest) (*ChangePasswordResponse, error)
+	Confirm(ctx context.Context, req ConfirmRequest) (*ConfirmResponse, error)
+	ResetPassword(ctx context.Context, req ResetPasswordRequest) (*ResetPasswordResponse, error)
+	SendConfirmation(ctx context.Context, req SendConfirmationRequest) (*SendConfirmationResponse, error)
+	SendResetPassword(ctx context.Context, req SendResetPasswordRequest) (*SendResetPasswordResponse, error)
 }
 
 type Controller struct {
@@ -35,16 +35,16 @@ func New(service Service, signer gojwt.Signer) *Controller {
 }
 
 func (ctl *Controller) PostLogin(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var req passport.LoginRequest
+	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
-	res, err := ctl.service.Login(ctx, req)
+	res, err := ctl.service.Login(ctx, passport.NewCredential(req.Email, req.Password))
 	if errors.Is(passport.ErrConfirmationRequired, err) {
 		// Send confirmation error.
-		res, err := ctl.service.SendConfirmation(ctx, passport.SendConfirmationRequest{
+		res, err := ctl.service.SendConfirmation(ctx, SendConfirmationRequest{
 			Email: req.Email,
 		})
 		if err != nil {
@@ -82,7 +82,7 @@ Confirm your email address here:
 }
 
 func (ctl *Controller) PostRegister(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var req passport.RegisterRequest
+	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
@@ -109,7 +109,7 @@ func (ctl *Controller) PostRegister(w http.ResponseWriter, r *http.Request, ps h
 }
 
 func (ctl *Controller) PostChangeEmail(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var req passport.ChangeEmailRequest
+	var req ChangeEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
@@ -123,7 +123,7 @@ func (ctl *Controller) PostChangeEmail(w http.ResponseWriter, r *http.Request, p
 }
 
 func (ctl *Controller) PutChangePassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var req passport.ChangePasswordRequest
+	var req ChangePasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
@@ -137,7 +137,7 @@ func (ctl *Controller) PutChangePassword(w http.ResponseWriter, r *http.Request,
 }
 
 func (ctl *Controller) PutConfirm(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var req passport.ConfirmRequest
+	var req ConfirmRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
@@ -151,7 +151,7 @@ func (ctl *Controller) PutConfirm(w http.ResponseWriter, r *http.Request, ps htt
 }
 
 func (ctl *Controller) PostSendConfirmation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var req passport.SendConfirmationRequest
+	var req SendConfirmationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
@@ -167,7 +167,7 @@ func (ctl *Controller) PostSendConfirmation(w http.ResponseWriter, r *http.Reque
 }
 
 func (ctl *Controller) PutResetPassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var req passport.ResetPasswordRequest
+	var req ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
@@ -181,7 +181,7 @@ func (ctl *Controller) PutResetPassword(w http.ResponseWriter, r *http.Request, 
 }
 
 func (ctl *Controller) PostSendResetPassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var req passport.SendResetPasswordRequest
+	var req SendResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return

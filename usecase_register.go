@@ -9,12 +9,13 @@ type (
 		Create(ctx context.Context, email, password string) (*User, error)
 	}
 
-	register interface {
-		Exec(ctx context.Context, cred Credential) (*User, error)
+	RegisterOptions struct {
+		Repository registerRepository
+		Encoder    PasswordEncoder
 	}
 
 	Register struct {
-		users registerRepository
+		options RegisterOptions
 	}
 )
 
@@ -23,16 +24,12 @@ func (r *Register) Exec(ctx context.Context, cred Credential) (*User, error) {
 		return nil, err
 	}
 
-	pwd, err := r.encryptPassword(cred.Password)
+	cipherText, err := r.options.Encoder.Encode(cred.Password.Byte())
 	if err != nil {
 		return nil, err
 	}
 
-	var (
-		email    = cred.Email.Value()
-		password = pwd.Value()
-	)
-	user, err := r.users.Create(ctx, email, password)
+	user, err := r.options.Repository.Create(ctx, cred.Email.Value(), cipherText)
 	if err != nil {
 		return nil, err
 	}
@@ -43,11 +40,7 @@ func (r *Register) validate(cred Credential) error {
 	return cred.Validate()
 }
 
-func (r *Register) encryptPassword(password Password) (SecurePassword, error) {
-	return password.Encrypt()
-}
-
 // NewRegister returns a new Register service.
-func NewRegister(repository registerRepository) *Register {
-	return &Register{repository}
+func NewRegister(options RegisterOptions) *Register {
+	return &Register{options}
 }

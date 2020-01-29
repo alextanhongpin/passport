@@ -6,20 +6,26 @@ import (
 	"errors"
 )
 
-type requestResetPassword interface {
-	Exec(ctx context.Context, email Email) (string, error)
-}
+type (
+	RequestResetPasswordOptions struct {
+		Repository requestResetPasswordRepository
+	}
 
-type RequestResetPassword struct {
-	users requestResetPasswordRepository
-}
+	RequestResetPassword struct {
+		options RequestResetPasswordOptions
+	}
+
+	requestResetPasswordRepository interface {
+		UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
+	}
+)
 
 func (r *RequestResetPassword) Exec(ctx context.Context, email Email) (string, error) {
 	if err := email.Validate(); err != nil {
 		return "", err
 	}
 	recoverable := NewRecoverable()
-	_, err := r.users.UpdateRecoverable(ctx, email.Value(), recoverable)
+	_, err := r.options.Repository.UpdateRecoverable(ctx, email.Value(), recoverable)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrUserNotFound
 	}
@@ -32,18 +38,6 @@ func (r *RequestResetPassword) Exec(ctx context.Context, email Email) (string, e
 	return recoverable.ResetPasswordToken, nil
 }
 
-type requestResetPasswordRepository interface {
-	UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
-}
-
-type RequestResetPasswordRepository struct {
-	UpdateRecoverableFunc UpdateRecoverable
-}
-
-func (r *RequestResetPasswordRepository) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
-	return r.UpdateRecoverableFunc(ctx, email, recoverable)
-}
-
-func NewRequestResetPassword(repository requestResetPasswordRepository) *RequestResetPassword {
-	return &RequestResetPassword{repository}
+func NewRequestResetPassword(opts RequestResetPasswordOptions) *RequestResetPassword {
+	return &RequestResetPassword{opts}
 }

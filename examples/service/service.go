@@ -8,31 +8,39 @@ import (
 )
 
 type Auth struct {
-	login             passport.Login
-	register          passport.Register
-	changeEmail       passport.ChangeEmail
-	changePassword    passport.ChangePassword
-	confirm           passport.Confirm
-	resetPassword     passport.ResetPassword
-	sendConfirmation  passport.SendConfirmation
-	sendResetPassword passport.SendResetPassword
+	login                passport.Login
+	register             passport.Register
+	changeEmail          passport.ChangeEmail
+	changePassword       passport.ChangePassword
+	confirm              passport.Confirm
+	resetPassword        passport.ResetPassword
+	sendConfirmation     passport.SendConfirmation
+	requestResetPassword passport.RequestResetPassword
 }
 
 func NewAuth(db *sql.DB) *Auth {
 	repo := passport.NewPostgres(db)
 	return &Auth{
-		login:             passport.NewLogin(repo),
-		register:          passport.NewRegister(repo),
-		changeEmail:       passport.NewChangeEmail(repo),
-		changePassword:    passport.NewChangePassword(repo),
-		confirm:           passport.NewConfirm(repo),
-		resetPassword:     passport.NewResetPassword(repo),
-		sendConfirmation:  passport.NewSendConfirmation(repo),
-		sendResetPassword: passport.NewSendResetPassword(repo),
+		login:                passport.NewLogin(repo),
+		register:             passport.NewRegister(repo),
+		changeEmail:          passport.NewChangeEmail(repo),
+		changePassword:       passport.NewChangePassword(repo),
+		confirm:              passport.NewConfirm(repo),
+		resetPassword:        passport.NewResetPassword(repo),
+		sendConfirmation:     passport.NewSendConfirmation(repo),
+		requestResetPassword: passport.NewRequestResetPassword(repo),
 	}
 }
 
-func (a *Auth) Login(ctx context.Context, req passport.LoginRequest) (*passport.LoginResponse, error) {
+type (
+	LoginRequest struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	LoginResponse struct{}
+)
+
+func (a *Auth) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	return a.login(ctx, req)
 }
 
@@ -60,6 +68,6 @@ func (a *Auth) SendConfirmation(ctx context.Context, req passport.SendConfirmati
 	return a.sendConfirmation(ctx, req)
 }
 
-func (a *Auth) SendResetPassword(ctx context.Context, req passport.SendResetPasswordRequest) (*passport.SendResetPasswordResponse, error) {
-	return a.sendResetPassword(ctx, req)
+func (a *Auth) RequestResetPassword(ctx context.Context, req passport.RequestResetPasswordRequest) (*passport.RequestResetPasswordResponse, error) {
+	return a.requestResetPassword(ctx, req)
 }

@@ -7,16 +7,18 @@ import (
 )
 
 type (
-	changePassword interface {
-		Exec(ctx context.Context, currentUserID UserID, password, confirmPassword Password) error
-	}
-
 	changePasswordRepository interface {
 		Find(ctx context.Context, id string) (*User, error)
 		UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error)
 	}
+
+	ChangePasswordOptions struct {
+		Repository      changePasswordRepository
+		EncoderComparer PasswordEncoderComparer
+	}
+
 	ChangePassword struct {
-		users changePasswordRepository
+		options ChangePasswordOptions
 	}
 )
 
@@ -36,11 +38,11 @@ func (c *ChangePassword) Exec(ctx context.Context, currentUserID UserID, passwor
 	); err != nil {
 		return err
 	}
-	securePwd, err := password.Encrypt()
+	cipherText, err := c.options.EncoderComparer.Encode(password.Byte())
 	if err != nil {
 		return err
 	}
-	_, err = c.users.UpdatePassword(ctx, currentUserID.Value(), securePwd.Value())
+	_, err = c.options.Repository.UpdatePassword(ctx, currentUserID.Value(), cipherText)
 	return err
 }
 
@@ -58,7 +60,7 @@ func (c *ChangePassword) validate(userID UserID, password, confirmPassword Passw
 }
 
 func (c *ChangePassword) findUser(ctx context.Context, userID UserID) (*User, error) {
-	user, err := c.users.Find(ctx, userID.Value())
+	user, err := c.options.Repository.Find(ctx, userID.Value())
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}
@@ -68,8 +70,11 @@ func (c *ChangePassword) findUser(ctx context.Context, userID UserID) (*User, er
 	return user, nil
 }
 
-func (c *ChangePassword) checkPasswordNotUsed(encrypted SecurePassword, plainText Password) error {
-	if err := encrypted.Compare(plainText); err == nil {
+func (c *ChangePassword) checkPasswordNotUsed(cipherText, plainText Password) error {
+	if err := c.options.EncoderComparer.Compare(
+		cipherText.Byte(),
+		plainText.Byte(),
+	); err == nil {
 		return ErrPasswordUsed
 	}
 	return nil
@@ -88,6 +93,6 @@ func (c *ChangePasswordRepository) UpdatePassword(ctx context.Context, userID, e
 	return c.UpdatePasswordFunc(ctx, userID, encryptedPassword)
 }
 
-func NewChangePassword(repository changePasswordRepository) *ChangePassword {
-	return &ChangePassword{repository}
+func NewChangePassword(options ChangePasswordOptions) *ChangePassword {
+	return &ChangePassword{options}
 }

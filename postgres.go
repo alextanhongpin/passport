@@ -235,6 +235,6 @@ func getUser(db *sql.DB, stmt string, arguments ...interface{}) (*User, error) {
 	if confirmedAt.Valid {
 		u.Confirmable.ConfirmedAt = confirmedAt.Time
 	}
-	u.EncryptedPassword = NewArgon2Password(encryptedPassword)
+	u.EncryptedPassword = NewPassword(encryptedPassword)
 	return &u, nil
 }

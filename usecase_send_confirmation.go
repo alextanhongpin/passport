@@ -7,16 +7,17 @@ import (
 )
 
 type (
-	sendConfirmation interface {
-		Exec(ctx context.Context, email Email) (string, error)
-	}
-
 	sendConfirmationRepository interface {
 		WithEmail(ctx context.Context, email string) (*User, error)
 		UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
 	}
+
+	SendConfirmationOptions struct {
+		Repository sendConfirmationRepository
+	}
+
 	SendConfirmation struct {
-		users sendConfirmationRepository
+		options SendConfirmationOptions
 	}
 )
 
@@ -35,7 +36,7 @@ func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error
 	}
 
 	confirmable := NewConfirmable(email.Value())
-	_, err = s.users.UpdateConfirmable(ctx, email.Value(), confirmable)
+	_, err = s.options.Repository.UpdateConfirmable(ctx, email.Value(), confirmable)
 	if err != nil {
 		return "", err
 	}
@@ -45,7 +46,7 @@ func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error
 }
 
 func (s *SendConfirmation) findUser(ctx context.Context, email Email) (*User, error) {
-	user, err := s.users.WithEmail(ctx, email.Value())
+	user, err := s.options.Repository.WithEmail(ctx, email.Value())
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}
@@ -55,19 +56,6 @@ func (s *SendConfirmation) findUser(ctx context.Context, email Email) (*User, er
 	return user, nil
 }
 
-type SendConfirmationRepository struct {
-	WithEmailFunc         WithEmail
-	UpdateConfirmableFunc UpdateConfirmable
-}
-
-func (s *SendConfirmationRepository) WithEmail(ctx context.Context, email string) (*User, error) {
-	return s.WithEmailFunc(ctx, email)
-}
-
-func (s *SendConfirmationRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
-	return s.UpdateConfirmableFunc(ctx, email, confirmable)
-}
-
-func NewSendConfirmation(repository sendConfirmationRepository) *SendConfirmation {
-	return &SendConfirmation{repository}
+func NewSendConfirmation(options SendConfirmationOptions) *SendConfirmation {
+	return &SendConfirmation{options}
 }

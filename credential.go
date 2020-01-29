@@ -11,11 +11,6 @@ type Credential struct {
 	Password Password
 }
 
-// Valid checks if the email is valid.
-func (c Credential) Valid() bool {
-	return c.Email.Valid() && c.Password.Valid()
-}
-
 // Validate is like Valid, except that it returns error instead of boolean.
 func (c Credential) Validate() error {
 	if err := c.Email.Validate(); err != nil {

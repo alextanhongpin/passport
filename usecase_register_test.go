@@ -55,8 +55,15 @@ func (m *mockRegisterRepository) Create(ctx context.Context, email, password str
 	return m.user, m.err
 }
 
-func register(repo *mockRegisterRepository, email, password string) (*passport.User, error) {
-	return passport.NewRegister(repo).Exec(
+func registerOptions(r *mockRegisterRepository) passport.RegisterOptions {
+	return passport.RegisterOptions{
+		Repository: r,
+		Encoder:    passport.NewArgon2Password(),
+	}
+}
+
+func register(r *mockRegisterRepository, email, password string) (*passport.User, error) {
+	return passport.NewRegister(registerOptions(r)).Exec(
 		context.TODO(),
 		passport.NewCredential(email, password),
 	)

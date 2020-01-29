@@ -78,8 +78,14 @@ func (m *mockSendConfirmationRepository) UpdateConfirmable(ctx context.Context, 
 	return m.updateConfirmableResponse, m.updateConfirmableError
 }
 
-func sendConfirmation(repo *mockSendConfirmationRepository, email string) (string, error) {
-	return passport.NewSendConfirmation(repo).Exec(
+func sendConfirmationOptions(r *mockSendConfirmationRepository) passport.SendConfirmationOptions {
+	return passport.SendConfirmationOptions{
+		Repository: r,
+	}
+}
+
+func sendConfirmation(r *mockSendConfirmationRepository, email string) (string, error) {
+	return passport.NewSendConfirmation(sendConfirmationOptions(r)).Exec(
 		context.TODO(),
 		passport.NewEmail(email),
 	)

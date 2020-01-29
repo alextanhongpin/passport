@@ -58,8 +58,14 @@ func (m *mockRequestResetPasswordRepository) UpdateRecoverable(ctx context.Conte
 	return m.updateRecoverableResponse, m.updateRecoverableError
 }
 
-func requestResetPassword(repo *mockRequestResetPasswordRepository, email string) (string, error) {
-	return passport.NewRequestResetPassword(repo).Exec(
+func requestResetPasswordOptions(r *mockRequestResetPasswordRepository) passport.RequestResetPasswordOptions {
+	return passport.RequestResetPasswordOptions{
+		Repository: r,
+	}
+}
+
+func requestResetPassword(r *mockRequestResetPasswordRepository, email string) (string, error) {
+	return passport.NewRequestResetPassword(requestResetPasswordOptions(r)).Exec(
 		context.TODO(),
 		passport.NewEmail(email),
 	)

@@ -98,7 +98,7 @@ func TestResetPasswordSamePassword(t *testing.T) {
 
 	res, err := resetPassword(&mockResetPasswordRepository{
 		withResetPasswordTokenResponse: &passport.User{
-			EncryptedPassword: passport.NewArgon2Password(encrypted),
+			EncryptedPassword: passport.NewPassword(encrypted),
 			Recoverable: passport.Recoverable{
 				ResetPasswordSentAt: time.Now(),
 				AllowPasswordChange: true,
@@ -125,7 +125,7 @@ func TestResetPasswordSuccess(t *testing.T) {
 		withResetPasswordTokenResponse: &passport.User{
 			ID:                "123",
 			Email:             "john.doe@mail.com",
-			EncryptedPassword: passport.NewArgon2Password(encrypted),
+			EncryptedPassword: passport.NewPassword(encrypted),
 			Recoverable: passport.Recoverable{
 				ResetPasswordSentAt: time.Now(),
 				AllowPasswordChange: true,
@@ -159,8 +159,15 @@ func (m *mockResetPasswordRepository) UpdateRecoverable(ctx context.Context, ema
 	return m.updateRecoverableResponse, m.updateRecoverableError
 }
 
-func resetPassword(repo *mockResetPasswordRepository, token, password, confirmPassword string) (*passport.User, error) {
-	return passport.NewResetPassword(repo).Exec(
+func resetPasswordOptions(r *mockResetPasswordRepository) passport.ResetPasswordOptions {
+	return passport.ResetPasswordOptions{
+		Repository:      r,
+		EncoderComparer: passport.NewArgon2Password(),
+	}
+}
+
+func resetPassword(r *mockResetPasswordRepository, token, password, confirmPassword string) (*passport.User, error) {
+	return passport.NewResetPassword(resetPasswordOptions(r)).Exec(
 		context.TODO(),
 		passport.NewToken(token),
 		passport.NewPassword(password),

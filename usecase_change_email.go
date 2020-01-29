@@ -7,18 +7,18 @@ import (
 )
 
 type (
-	changeEmail interface {
-		Exec(ctx context.Context, currentUserID UserID, email Email) (string, error)
-	}
-
 	changeEmailRepository interface {
 		HasEmail(ctx context.Context, email string) (bool, error)
 		Find(ctx context.Context, id string) (*User, error)
 		UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
 	}
 
+	ChangeEmailOptions struct {
+		Repository changeEmailRepository
+	}
+
 	ChangeEmail struct {
-		users changeEmailRepository
+		options ChangeEmailOptions
 	}
 )
 
@@ -42,7 +42,7 @@ func (c *ChangeEmail) Exec(ctx context.Context, currentUserID UserID, email Emai
 	}
 
 	var confirmable = NewConfirmable(email.Value())
-	if _, err = c.users.UpdateConfirmable(ctx, currEmail.Value(), confirmable); err != nil {
+	if _, err = c.options.Repository.UpdateConfirmable(ctx, currEmail.Value(), confirmable); err != nil {
 		return "", err
 	}
 
@@ -61,7 +61,7 @@ func (c *ChangeEmail) validate(userID UserID, email Email) error {
 }
 
 func (c *ChangeEmail) checkEmailExists(ctx context.Context, email Email) error {
-	exists, err := c.users.HasEmail(ctx, email.Value())
+	exists, err := c.options.Repository.HasEmail(ctx, email.Value())
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -72,7 +72,7 @@ func (c *ChangeEmail) checkEmailExists(ctx context.Context, email Email) error {
 }
 
 func (c *ChangeEmail) findUser(ctx context.Context, userID UserID) (*User, error) {
-	user, err := c.users.Find(ctx, userID.Value())
+	user, err := c.options.Repository.Find(ctx, userID.Value())
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}
@@ -82,24 +82,6 @@ func (c *ChangeEmail) findUser(ctx context.Context, userID UserID) (*User, error
 	return user, nil
 }
 
-type ChangeEmailRepository struct {
-	HasEmailFunc          HasEmail
-	FindFunc              Find
-	UpdateConfirmableFunc UpdateConfirmable
-}
-
-func (c *ChangeEmailRepository) HasEmail(ctx context.Context, email string) (bool, error) {
-	return c.HasEmailFunc(ctx, email)
-}
-
-func (c *ChangeEmailRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
-	return c.UpdateConfirmableFunc(ctx, email, confirmable)
-}
-
-func (c *ChangeEmailRepository) Find(ctx context.Context, id string) (*User, error) {
-	return c.FindFunc(ctx, id)
-}
-
-func NewChangeEmail(repository changeEmailRepository) *ChangeEmail {
-	return &ChangeEmail{repository}
+func NewChangeEmail(opts ChangeEmailOptions) *ChangeEmail {
+	return &ChangeEmail{opts}
 }
