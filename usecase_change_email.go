@@ -36,13 +36,12 @@ func (c *ChangeEmail) Exec(ctx context.Context, currentUserID UserID, email Emai
 		return "", err
 	}
 
-	currEmail := NewEmail(user.Email)
-	if err := currEmail.Validate(); err != nil {
+	if err := c.checkEmailPresent(user); err != nil {
 		return "", err
 	}
 
 	var confirmable = NewConfirmable(email.Value())
-	if _, err = c.options.Repository.UpdateConfirmable(ctx, currEmail.Value(), confirmable); err != nil {
+	if _, err = c.options.Repository.UpdateConfirmable(ctx, user.Email, confirmable); err != nil {
 		return "", err
 	}
 
@@ -80,6 +79,14 @@ func (c *ChangeEmail) findUser(ctx context.Context, userID UserID) (*User, error
 		return nil, err
 	}
 	return user, nil
+}
+
+func (c *ChangeEmail) checkEmailPresent(user *User) error {
+	email := NewEmail(user.Email)
+	if err := email.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewChangeEmail(opts ChangeEmailOptions) *ChangeEmail {

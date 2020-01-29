@@ -31,8 +31,8 @@ func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error
 		return "", err
 	}
 
-	if verified := user.Confirmable.Verified(); verified {
-		return "", ErrEmailVerified
+	if err := s.checkNotYetConfirmed(user.Confirmable); err != nil {
+		return "", err
 	}
 
 	confirmable := NewConfirmable(email.Value())
@@ -54,6 +54,13 @@ func (s *SendConfirmation) findUser(ctx context.Context, email Email) (*User, er
 		return nil, err
 	}
 	return user, nil
+}
+
+func (s *SendConfirmation) checkNotYetConfirmed(confirmable Confirmable) error {
+	if verified := confirmable.Verified(); verified {
+		return ErrEmailVerified
+	}
+	return nil
 }
 
 func NewSendConfirmation(options SendConfirmationOptions) *SendConfirmation {

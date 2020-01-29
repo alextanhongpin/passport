@@ -16,17 +16,17 @@ var (
 const PasswordMinLen = 8
 
 type (
-	PasswordEncoder interface {
+	passwordEncoder interface {
 		Encode(password []byte) (string, error)
 	}
 
-	PasswordComparer interface {
+	passwordComparer interface {
 		Compare(hash, password []byte) error
 	}
 
-	PasswordEncoderComparer interface {
-		PasswordEncoder
-		PasswordComparer
+	passwordEncoderComparer interface {
+		passwordEncoder
+		passwordComparer
 	}
 )
 

@@ -7,6 +7,10 @@ import (
 )
 
 type (
+	requestResetPasswordRepository interface {
+		UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
+	}
+
 	RequestResetPasswordOptions struct {
 		Repository requestResetPasswordRepository
 	}
@@ -14,16 +18,13 @@ type (
 	RequestResetPassword struct {
 		options RequestResetPasswordOptions
 	}
-
-	requestResetPasswordRepository interface {
-		UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
-	}
 )
 
 func (r *RequestResetPassword) Exec(ctx context.Context, email Email) (string, error) {
 	if err := email.Validate(); err != nil {
 		return "", err
 	}
+
 	recoverable := NewRecoverable()
 	_, err := r.options.Repository.UpdateRecoverable(ctx, email.Value(), recoverable)
 	if errors.Is(err, sql.ErrNoRows) {

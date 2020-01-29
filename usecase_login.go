@@ -13,7 +13,7 @@ type (
 
 	LoginOptions struct {
 		Repository loginRepository
-		Comparer   PasswordComparer
+		Comparer   passwordComparer
 	}
 
 	// Options are good, since we don't need to care about the sequence,

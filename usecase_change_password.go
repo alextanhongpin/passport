@@ -14,7 +14,7 @@ type (
 
 	ChangePasswordOptions struct {
 		Repository      changePasswordRepository
-		EncoderComparer PasswordEncoderComparer
+		EncoderComparer passwordEncoderComparer
 	}
 
 	ChangePassword struct {
