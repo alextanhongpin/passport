@@ -14,6 +14,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+//go:generate packr2
 func main() {
 	db, err := database.Setup()
 	if err != nil {
@@ -37,7 +38,7 @@ func main() {
 	router.PUT("/confirmations", ctl.PutConfirm)
 	router.POST("/confirmations", ctl.PostSendConfirmation)
 	router.PUT("/passwords", ctl.PutResetPassword)
-	router.POST("/passwords", ctl.PostSendResetPassword)
+	router.POST("/passwords", ctl.PostRequestResetPassword)
 
 	log.Println("Listening to port *:8080. Press ctrl + c to cancel.")
 	http.ListenAndServe(":8080", router)
