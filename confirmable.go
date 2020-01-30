@@ -8,7 +8,10 @@ import (
 )
 
 // ErrConfirmationRequired indicates that the email requires confirmation.
-var ErrConfirmationRequired = errors.New("confirmation required")
+var (
+	ErrConfirmationRequired = errors.New("confirmation required")
+	ErrConfirmed            = errors.New("already confirmed")
+)
 
 // ConfirmationTokenValidity represents the duration the confirmation token is
 // valid.
@@ -28,13 +31,13 @@ type Confirmable struct {
 
 // Valid checks if the confirmation token is still within the validity
 // period.
-func (c Confirmable) Valid() bool {
-	return time.Since(c.ConfirmationSentAt) < ConfirmationTokenValidity
+func (c Confirmable) Valid(ttl time.Duration) bool {
+	return time.Since(c.ConfirmationSentAt) < ttl
 }
 
 // ValidateExpiry returns an error indicating the token has expired.
-func (c Confirmable) ValidateExpiry() error {
-	if valid := c.Valid(); !valid {
+func (c Confirmable) ValidateExpiry(ttl time.Duration) error {
+	if valid := c.Valid(ttl); !valid {
 		return ErrTokenExpired
 	}
 	return nil
@@ -48,6 +51,13 @@ func (c Confirmable) Verified() bool {
 // ValidateConfirmed returns an error indicating the email has not been
 // verified.
 func (c Confirmable) ValidateConfirmed() error {
+	if verified := c.Verified(); verified {
+		return ErrConfirmed
+	}
+	return nil
+}
+
+func (c Confirmable) ValidateUnconfirmed() error {
 	if verified := c.Verified(); !verified {
 		return ErrConfirmationRequired
 	}

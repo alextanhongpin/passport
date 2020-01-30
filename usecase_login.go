@@ -77,7 +77,7 @@ func (l *Login) checkPasswordMatch(cipherText, plainText Password) error {
 }
 
 func (l *Login) checkUserConfirmed(confirmable Confirmable) error {
-	return confirmable.ValidateConfirmed()
+	return confirmable.ValidateUnconfirmed()
 }
 
 func NewLogin(options LoginOptions) *Login {

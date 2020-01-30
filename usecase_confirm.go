@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 )
 
 type (
@@ -13,7 +14,8 @@ type (
 	}
 
 	ConfirmOptions struct {
-		Repository confirmRepository
+		Repository                confirmRepository
+		ConfirmationTokenValidity time.Duration
 	}
 
 	Confirm struct {
@@ -39,6 +41,10 @@ func (c *Confirm) Exec(ctx context.Context, token Token) error {
 		return err
 	}
 
+	if err := c.checkConfirmationTokenValid(user.Confirmable); err != nil {
+		return err
+	}
+
 	var confirmable Confirmable
 	_, err = c.options.Repository.UpdateConfirmable(ctx, user.Email, confirmable)
 	return err
@@ -61,14 +67,11 @@ func (c *Confirm) checkEmailPresent(user *User) error {
 }
 
 func (c *Confirm) checkCanConfirm(confirmable Confirmable) error {
-	if verified := confirmable.Verified(); verified {
-		return ErrEmailVerified
-	}
+	return confirmable.ValidateConfirmed()
+}
 
-	if err := confirmable.ValidateExpiry(); err != nil {
-		return err
-	}
-	return nil
+func (c *Confirm) checkConfirmationTokenValid(confirmable Confirmable) error {
+	return confirmable.ValidateExpiry(c.options.ConfirmationTokenValidity)
 }
 
 func NewConfirm(options ConfirmOptions) *Confirm {

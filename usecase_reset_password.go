@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 )
 
 type (
@@ -14,8 +15,9 @@ type (
 	}
 
 	ResetPasswordOptions struct {
-		Repository      resetPasswordRepository
-		EncoderComparer passwordEncoderComparer
+		Repository               resetPasswordRepository
+		EncoderComparer          passwordEncoderComparer
+		RecoverableTokenValidity time.Duration
 	}
 
 	ResetPassword struct {
@@ -97,8 +99,8 @@ func (r *ResetPassword) findUser(ctx context.Context, token Token) (*User, error
 }
 
 func (r *ResetPassword) checkCanResetPassword(recoverable Recoverable) error {
-	if !recoverable.Valid() {
-		return ErrTokenExpired
+	if err := recoverable.ValidateExpiry(r.options.RecoverableTokenValidity); err != nil {
+		return err
 	}
 	if !recoverable.AllowPasswordChange {
 		return ErrPasswordChangeNotAllowed

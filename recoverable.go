@@ -18,12 +18,12 @@ type Recoverable struct {
 }
 
 // Valid checks if the reset password token is within the validity period.
-func (r Recoverable) Valid() bool {
-	return time.Since(r.ResetPasswordSentAt) < RecoverableTokenValidity
+func (r Recoverable) Valid(ttl time.Duration) bool {
+	return time.Since(r.ResetPasswordSentAt) < ttl
 }
 
-func (r Recoverable) Validate() error {
-	if valid := r.Valid(); !valid {
+func (r Recoverable) ValidateExpiry(ttl time.Duration) error {
+	if valid := r.Valid(ttl); !valid {
 		return ErrTokenExpired
 	}
 	return nil

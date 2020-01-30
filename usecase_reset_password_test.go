@@ -161,8 +161,9 @@ func (m *mockResetPasswordRepository) UpdateRecoverable(ctx context.Context, ema
 
 func resetPasswordOptions(r *mockResetPasswordRepository) passport.ResetPasswordOptions {
 	return passport.ResetPasswordOptions{
-		Repository:      r,
-		EncoderComparer: passport.NewArgon2Password(),
+		Repository:               r,
+		EncoderComparer:          passport.NewArgon2Password(),
+		RecoverableTokenValidity: passport.RecoverableTokenValidity,
 	}
 }
 

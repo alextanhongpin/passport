@@ -160,7 +160,11 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	a2 := passport.NewArgon2Password()
 
 	suite.repository = passport.NewPostgres(suite.db)
-	suite.confirm = passport.NewConfirm(passport.ConfirmOptions{Repository: suite.repository})
+	suite.confirm = passport.NewConfirm(passport.ConfirmOptions{
+		Repository: suite.repository,
+
+		ConfirmationTokenValidity: passport.ConfirmationTokenValidity,
+	})
 	suite.login = passport.NewLogin(
 		passport.LoginOptions{
 			Repository: suite.repository,
@@ -186,12 +190,15 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	)
 	suite.resetPassword = passport.NewResetPassword(
 		passport.ResetPasswordOptions{
-			Repository:      suite.repository,
-			EncoderComparer: a2,
+			Repository:               suite.repository,
+			EncoderComparer:          a2,
+			RecoverableTokenValidity: passport.RecoverableTokenValidity,
 		},
 	)
 	suite.changeEmail = passport.NewChangeEmail(
-		passport.ChangeEmailOptions{Repository: suite.repository},
+		passport.ChangeEmailOptions{
+			Repository: suite.repository,
+		},
 	)
 }
 

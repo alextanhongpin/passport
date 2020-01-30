@@ -47,13 +47,15 @@ func NewAuth(db *sql.DB) *Auth {
 		),
 		confirm: passport.NewConfirm(
 			passport.ConfirmOptions{
-				Repository: r,
+				Repository:                r,
+				ConfirmationTokenValidity: passport.ConfirmationTokenValidity,
 			},
 		),
 		resetPassword: passport.NewResetPassword(
 			passport.ResetPasswordOptions{
-				Repository:      r,
-				EncoderComparer: ec,
+				Repository:               r,
+				EncoderComparer:          ec,
+				RecoverableTokenValidity: passport.RecoverableTokenValidity,
 			},
 		),
 		sendConfirmation: passport.NewSendConfirmation(

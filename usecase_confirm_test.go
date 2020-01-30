@@ -62,7 +62,7 @@ func TestConfirmTokenEmailVerified(t *testing.T) {
 			},
 		},
 	}, token)
-	assert.Equal(passport.ErrEmailVerified, err)
+	assert.Equal(passport.ErrConfirmed, err)
 }
 
 func TestConfirmEmailSuccess(t *testing.T) {
@@ -102,7 +102,8 @@ func (m *mockConfirmRepository) UpdateConfirmable(ctx context.Context, email str
 
 func confirmOptions(r *mockConfirmRepository) passport.ConfirmOptions {
 	return passport.ConfirmOptions{
-		Repository: r,
+		Repository:                r,
+		ConfirmationTokenValidity: passport.ConfirmationTokenValidity,
 	}
 }
 
