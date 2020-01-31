@@ -26,8 +26,8 @@ func TestChangeEmailValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
-			res, err := changeEmail(&mockChangeEmailRepository{}, tt.userID, tt.email)
-			assert.Nil(res)
+			token, err := changeEmail(&mockChangeEmailRepository{}, tt.userID, tt.email)
+			assert.Equal("", token)
 			assert.Equal(tt.err, err)
 		})
 	}
@@ -42,8 +42,8 @@ func TestChangeEmailExists(t *testing.T) {
 	repo := &mockChangeEmailRepository{
 		hasEmailResponse: true,
 	}
-	res, err := changeEmail(repo, userID, email)
-	assert.Nil(res)
+	token, err := changeEmail(repo, userID, email)
+	assert.Equal("", token)
 	assert.Equal(passport.ErrEmailExists, err)
 }
 
@@ -56,9 +56,9 @@ func TestChangeEmailNewUser(t *testing.T) {
 	repo := &mockChangeEmailRepository{
 		findError: sql.ErrNoRows,
 	}
-	res, err := changeEmail(repo, userID, email)
-	assert.Nil(res)
+	token, err := changeEmail(repo, userID, email)
 	assert.Equal(passport.ErrUserNotFound, err)
+	assert.Equal("", token)
 }
 
 func TestChangeEmailSuccess(t *testing.T) {
@@ -78,10 +78,9 @@ func TestChangeEmailSuccess(t *testing.T) {
 		},
 		updateConfirmableResponse: true,
 	}
-	res, err := changeEmail(repo, userID, email)
+	token, err := changeEmail(repo, userID, email)
 	assert.Nil(err)
-	assert.True(res.Success)
-	assert.True(res.Token != "")
+	assert.True(token != "")
 }
 
 type mockChangeEmailRepository struct {
@@ -105,12 +104,16 @@ func (m *mockChangeEmailRepository) UpdateConfirmable(ctx context.Context, email
 	return m.updateConfirmableResponse, m.updateConfirmableError
 }
 
-func changeEmail(repo *mockChangeEmailRepository, userID, email string) (*passport.ChangeEmailResponse, error) {
-	return passport.NewChangeEmail(repo)(
+func changeEmailOptions(r *mockChangeEmailRepository) passport.ChangeEmailOptions {
+	return passport.ChangeEmailOptions{
+		Repository: r,
+	}
+}
+
+func changeEmail(r *mockChangeEmailRepository, userID, email string) (string, error) {
+	return passport.NewChangeEmail(changeEmailOptions(r)).Exec(
 		context.TODO(),
-		passport.ChangeEmailRequest{
-			UserID: userID,
-			Email:  email,
-		},
+		passport.UserID(userID),
+		passport.NewEmail(email),
 	)
 }

@@ -20,18 +20,17 @@ func TestChangePasswordValidation(t *testing.T) {
 		err             error
 	}{
 
-		{"when user_id is not provided", "", "123456", "123456", passport.ErrUserIDRequired},
-		{"when password is not provided", "1", "", "123456", passport.ErrPasswordRequired},
+		{"when user_id is not provided", "", "12345678", "12345678", passport.ErrUserIDRequired},
+		{"when password is not provided", "1", "", "12345678", passport.ErrPasswordDoNotMatch},
 		{"when password is too short", "1", "12345", "12345", passport.ErrPasswordTooShort},
-		{"when confirm_password is not provided", "1", "123456", "", passport.ErrPasswordDoNotMatch},
-		{"when password do not match", "1", "123456", "654321", passport.ErrPasswordDoNotMatch},
+		{"when confirm_password is not provided", "1", "12345678", "", passport.ErrPasswordDoNotMatch},
+		{"when password do not match", "1", "12345678", "87654321", passport.ErrPasswordDoNotMatch},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert := assert.New(t)
-			res, err := changePassword(&mockChangePasswordRepository{}, tt.userID, tt.password, tt.confirmPassword)
-			assert.Nil(res)
+			err := changePassword(&mockChangePasswordRepository{}, tt.userID, tt.password, tt.confirmPassword)
 			assert.Equal(tt.err, err)
 		})
 	}
@@ -41,14 +40,13 @@ func TestChangePasswordNewUser(t *testing.T) {
 	assert := assert.New(t)
 	var (
 		userID          = "user_1"
-		password        = "123456"
-		confirmPassword = "123456"
+		password        = "12345678"
+		confirmPassword = "12345678"
 	)
 	repo := &mockChangePasswordRepository{
 		findError: sql.ErrNoRows,
 	}
-	res, err := changePassword(repo, userID, password, confirmPassword)
-	assert.Nil(res)
+	err := changePassword(repo, userID, password, confirmPassword)
 	assert.Equal(passport.ErrUserNotFound, err)
 }
 
@@ -56,19 +54,18 @@ func TestChangePasswordSamePassword(t *testing.T) {
 	assert := assert.New(t)
 	var (
 		userID          = "user_1"
-		password        = "123456"
-		confirmPassword = "123456"
+		password        = "12345678"
+		confirmPassword = "12345678"
 	)
-	encryptedPassword, err := passwd.Encrypt(password)
+	encryptedPassword, err := passwd.Encrypt([]byte(password))
 	assert.Nil(err)
 
 	repo := &mockChangePasswordRepository{
 		findResponse: &passport.User{
-			EncryptedPassword: encryptedPassword,
+			EncryptedPassword: passport.NewPassword(encryptedPassword),
 		},
 	}
-	res, err := changePassword(repo, userID, password, confirmPassword)
-	assert.Nil(res)
+	err = changePassword(repo, userID, password, confirmPassword)
 	assert.Equal(passport.ErrPasswordUsed, err)
 }
 
@@ -76,23 +73,22 @@ func TestChangePasswordSuccess(t *testing.T) {
 	assert := assert.New(t)
 	var (
 		userID          = "user_1"
-		oldPassword     = "123456"
-		newPassword     = "654321"
-		confirmPassword = "654321"
+		oldPassword     = "12345678"
+		newPassword     = "87654321"
+		confirmPassword = "87654321"
 	)
-	encryptedPassword, err := passwd.Encrypt(oldPassword)
+	encryptedPassword, err := passwd.Encrypt([]byte(oldPassword))
 	assert.Nil(err)
 
 	repo := &mockChangePasswordRepository{
 		findResponse: &passport.User{
 			ID:                userID,
-			EncryptedPassword: encryptedPassword,
+			EncryptedPassword: passport.NewPassword(encryptedPassword),
 		},
 		updatePasswordResponse: true,
 	}
-	res, err := changePassword(repo, userID, newPassword, confirmPassword)
+	err = changePassword(repo, userID, newPassword, confirmPassword)
 	assert.Nil(nil)
-	assert.True(res.Success)
 }
 
 type mockChangePasswordRepository struct {
@@ -110,13 +106,18 @@ func (m *mockChangePasswordRepository) UpdatePassword(ctx context.Context, userI
 	return m.updatePasswordResponse, m.updatePasswordError
 }
 
-func changePassword(repo *mockChangePasswordRepository, userID, password, confirmPassword string) (*passport.ChangePasswordResponse, error) {
-	return passport.NewChangePassword(repo)(
+func changePasswordOptions(r *mockChangePasswordRepository) passport.ChangePasswordOptions {
+	return passport.ChangePasswordOptions{
+		Repository:      r,
+		EncoderComparer: passport.NewArgon2Password(),
+	}
+}
+
+func changePassword(r *mockChangePasswordRepository, userID, password, confirmPassword string) error {
+	return passport.NewChangePassword(changePasswordOptions(r)).Exec(
 		context.TODO(),
-		passport.ChangePasswordRequest{
-			UserID:          userID,
-			Password:        password,
-			ConfirmPassword: confirmPassword,
-		},
+		passport.NewUserID(userID),
+		passport.NewPassword(password),
+		passport.NewPassword(confirmPassword),
 	)
 }

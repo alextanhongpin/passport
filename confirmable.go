@@ -1,9 +1,16 @@
 package passport
 
 import (
+	"errors"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
+)
+
+// ErrConfirmationRequired indicates that the email requires confirmation.
+var (
+	ErrConfirmationRequired = errors.New("confirmation required")
+	ErrConfirmed            = errors.New("already confirmed")
 )
 
 // ConfirmationTokenValidity represents the duration the confirmation token is
@@ -22,15 +29,39 @@ type Confirmable struct {
 	UnconfirmedEmail string `json:"unconfirmed_email,omitempty"`
 }
 
-// IsValid checks if the confirmation token is still within the validity
+// Valid checks if the confirmation token is still within the validity
 // period.
-func (c Confirmable) IsValid() bool {
-	return time.Since(c.ConfirmationSentAt) < ConfirmationTokenValidity
+func (c Confirmable) Valid(ttl time.Duration) bool {
+	return time.Since(c.ConfirmationSentAt) < ttl
 }
 
-// IsVerified checks if the user's email is verified.
-func (c Confirmable) IsVerified() bool {
+// ValidateExpiry returns an error indicating the token has expired.
+func (c Confirmable) ValidateExpiry(ttl time.Duration) error {
+	if valid := c.Valid(ttl); !valid {
+		return ErrTokenExpired
+	}
+	return nil
+}
+
+// Verified checks if the user's email is verified.
+func (c Confirmable) Verified() bool {
 	return !c.ConfirmedAt.IsZero() && c.UnconfirmedEmail == ""
+}
+
+// ValidateConfirmed returns an error indicating the email has not been
+// verified.
+func (c Confirmable) ValidateConfirmed() error {
+	if verified := c.Verified(); verified {
+		return ErrConfirmed
+	}
+	return nil
+}
+
+func (c Confirmable) ValidateUnconfirmed() error {
+	if verified := c.Verified(); !verified {
+		return ErrConfirmationRequired
+	}
+	return nil
 }
 
 // NewConfirmable returns a new Confirmable.

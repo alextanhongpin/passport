@@ -2,61 +2,50 @@ package passport
 
 import (
 	"context"
-	"strings"
-
-	"github.com/alextanhongpin/passwd"
 )
-
-type Register func(ctx context.Context, req RegisterRequest) (*RegisterResponse, error)
 
 type (
-	RegisterRequest struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+	registerRepository interface {
+		Create(ctx context.Context, email, password string) (*User, error)
 	}
-	RegisterResponse struct {
-		User User `json:"user"`
+
+	RegisterOptions struct {
+		Repository registerRepository
+		Encoder    passwordEncoder
+	}
+
+	Register struct {
+		options RegisterOptions
 	}
 )
 
-type registerRepository interface {
-	Create(ctx context.Context, email, password string) (*User, error)
-}
-
-func NewRegister(users registerRepository) Register {
-	return func(ctx context.Context, req RegisterRequest) (*RegisterResponse, error) {
-		var (
-			email    = strings.TrimSpace(req.Email)
-			password = strings.TrimSpace(req.Password)
-		)
-		if err := validateEmailAndPassword(email, password); err != nil {
-			return nil, err
-		}
-
-		encrypted, err := passwd.Encrypt(password)
-		if err != nil {
-			return nil, err
-		}
-
-		if password == encrypted {
-			panic("forgetting some validation here?")
-		}
-
-		user, err := users.Create(ctx, email, encrypted)
-		if err != nil {
-			return nil, err
-		}
-
-		return &RegisterResponse{
-			User: *user,
-		}, nil
+func (r *Register) Exec(ctx context.Context, cred Credential) (*User, error) {
+	if err := r.validate(cred); err != nil {
+		return nil, err
 	}
+
+	cipherText, err := r.encryptPassword(cred.Password.Byte())
+	if err != nil {
+		return nil, err
+	}
+
+	return r.createAccount(ctx, cred.Email.Value(), cipherText)
 }
 
-type RegisterRepository struct {
-	CreateFunc Create
+func (r *Register) validate(cred Credential) error {
+	return cred.Validate()
 }
 
-func (r *RegisterRepository) Create(ctx context.Context, email, password string) (*User, error) {
-	return r.CreateFunc(ctx, email, password)
+func (r *Register) encryptPassword(password []byte) (string, error) {
+	cipherText, err := r.options.Encoder.Encode(password)
+	return cipherText, err
+}
+
+func (r *Register) createAccount(ctx context.Context, email, password string) (*User, error) {
+	return r.options.Repository.Create(ctx, email, password)
+}
+
+// NewRegister returns a new Register service.
+func NewRegister(options RegisterOptions) *Register {
+	return &Register{options}
 }

@@ -4,21 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
-)
-
-type ChangeEmail func(context.Context, ChangeEmailRequest) (*ChangeEmailResponse, error)
-
-type (
-	ChangeEmailRequest struct {
-		UserID string `json:"user_id"`
-		Email  string `json:"email"`
-	}
-
-	ChangeEmailResponse struct {
-		Success bool   `json:"success"`
-		Token   string `json:"token"`
-	}
 )
 
 type (
@@ -27,73 +12,83 @@ type (
 		Find(ctx context.Context, id string) (*User, error)
 		UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
 	}
+
+	ChangeEmailOptions struct {
+		Repository changeEmailRepository
+	}
+
+	ChangeEmail struct {
+		options ChangeEmailOptions
+	}
 )
 
-type ChangeEmailRepository struct {
-	HasEmailFunc          HasEmail
-	FindFunc              Find
-	UpdateConfirmableFunc UpdateConfirmable
-}
-
-func (c *ChangeEmailRepository) HasEmail(ctx context.Context, email string) (bool, error) {
-	return c.HasEmailFunc(ctx, email)
-}
-
-func (c *ChangeEmailRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
-	return c.UpdateConfirmableFunc(ctx, email, confirmable)
-}
-
-func (c *ChangeEmailRepository) Find(ctx context.Context, id string) (*User, error) {
-	return c.FindFunc(ctx, id)
-}
-
-func NewChangeEmail(users changeEmailRepository) ChangeEmail {
-	return func(ctx context.Context, req ChangeEmailRequest) (*ChangeEmailResponse, error) {
-		var (
-			email  = strings.TrimSpace(req.Email)
-			userID = strings.TrimSpace(req.UserID)
-		)
-
-		if err := validateEmail(email); err != nil {
-			return nil, err
-		}
-		if userID == "" {
-			return nil, ErrUserIDRequired
-		}
-
-		exists, err := users.HasEmail(ctx, email)
-		if err != nil {
-			return nil, err
-		}
-		if exists {
-			return nil, ErrEmailExists
-		}
-
-		user, err := users.Find(ctx, userID)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrUserNotFound
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		var (
-			userEmail = strings.TrimSpace(user.Email)
-		)
-		if err := validateEmail(userEmail); err != nil {
-			return nil, err
-		}
-
-		var confirmable = NewConfirmable(email)
-		success, err := users.UpdateConfirmable(ctx, userEmail, confirmable)
-		if err != nil {
-			return nil, err
-		}
-
-		// Return the confirmable in order to send the email.
-		return &ChangeEmailResponse{
-			Success: success,
-			Token:   confirmable.ConfirmationToken,
-		}, nil
+func (c *ChangeEmail) Exec(ctx context.Context, currentUserID UserID, email Email) (string, error) {
+	if err := c.validate(currentUserID, email); err != nil {
+		return "", err
 	}
+
+	if err := c.checkEmailExists(ctx, email); err != nil {
+		return "", err
+	}
+
+	user, err := c.findUser(ctx, currentUserID)
+	if err != nil {
+		return "", err
+	}
+
+	if err := c.checkEmailPresent(user); err != nil {
+		return "", err
+	}
+
+	var confirmable = NewConfirmable(email.Value())
+	if _, err = c.options.Repository.UpdateConfirmable(ctx, user.Email, confirmable); err != nil {
+		return "", err
+	}
+
+	// Return the confirmable in order to send the email.
+	return confirmable.ConfirmationToken, nil
+}
+
+func (c *ChangeEmail) validate(userID UserID, email Email) error {
+	if err := email.Validate(); err != nil {
+		return err
+	}
+	if err := userID.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ChangeEmail) checkEmailExists(ctx context.Context, email Email) error {
+	exists, err := c.options.Repository.HasEmail(ctx, email.Value())
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if exists {
+		return ErrEmailExists
+	}
+	return nil
+}
+
+func (c *ChangeEmail) findUser(ctx context.Context, userID UserID) (*User, error) {
+	user, err := c.options.Repository.Find(ctx, userID.Value())
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (c *ChangeEmail) checkEmailPresent(user *User) error {
+	email := NewEmail(user.Email)
+	if err := email.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func NewChangeEmail(opts ChangeEmailOptions) *ChangeEmail {
+	return &ChangeEmail{opts}
 }

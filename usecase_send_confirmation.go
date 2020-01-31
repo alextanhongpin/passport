@@ -4,71 +4,65 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 )
-
-type SendConfirmation func(context.Context, SendConfirmationRequest) (*SendConfirmationResponse, error)
 
 type (
-	SendConfirmationRequest struct {
-		Email string `json:"email"`
+	sendConfirmationRepository interface {
+		WithEmail(ctx context.Context, email string) (*User, error)
+		UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
 	}
-	SendConfirmationResponse struct {
-		// Indicator on whether to send or not.
-		Success bool   `json:"success"`
-		Token   string `json:"token"`
+
+	SendConfirmationOptions struct {
+		Repository sendConfirmationRepository
+	}
+
+	SendConfirmation struct {
+		options SendConfirmationOptions
 	}
 )
 
-type sendConfirmationRepository interface {
-	WithEmail(ctx context.Context, email string) (*User, error)
-	UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
-}
-
-func NewSendConfirmation(users sendConfirmationRepository) SendConfirmation {
-	return func(ctx context.Context, req SendConfirmationRequest) (*SendConfirmationResponse, error) {
-		var (
-			email = strings.TrimSpace(req.Email)
-		)
-		if err := validateEmail(email); err != nil {
-			return nil, err
-		}
-
-		user, err := users.WithEmail(ctx, email)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrEmailNotFound
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		// Don't resend for users whose email is already confirmed.
-		if user.Confirmable.IsVerified() {
-			return nil, ErrEmailVerified
-		}
-
-		confirmable := NewConfirmable(email)
-		success, err := users.UpdateConfirmable(ctx, email, confirmable)
-		if err != nil {
-			return nil, err
-		}
-		// Return the confirmable in order to send the email.
-		return &SendConfirmationResponse{
-			Success: success,
-			Token:   confirmable.ConfirmationToken,
-		}, nil
+func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error) {
+	if err := email.Validate(); err != nil {
+		return "", err
 	}
+
+	user, err := s.findUser(ctx, email)
+	if err != nil {
+		return "", err
+	}
+
+	if err := s.checkNotYetConfirmed(user.Confirmable); err != nil {
+		return "", err
+	}
+
+	confirmable := NewConfirmable(email.Value())
+	_, err = s.options.Repository.UpdateConfirmable(ctx, email.Value(), confirmable)
+	if err != nil {
+		return "", err
+	}
+
+	// Return the confirmable in order to send the email.
+	return confirmable.ConfirmationToken, nil
 }
 
-type SendConfirmationRepository struct {
-	WithEmailFunc         WithEmail
-	UpdateConfirmableFunc UpdateConfirmable
+func (s *SendConfirmation) findUser(ctx context.Context, email Email) (*User, error) {
+	user, err := s.options.Repository.WithEmail(ctx, email.Value())
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
-func (s *SendConfirmationRepository) WithEmail(ctx context.Context, email string) (*User, error) {
-	return s.WithEmailFunc(ctx, email)
+func (s *SendConfirmation) checkNotYetConfirmed(confirmable Confirmable) error {
+	if verified := confirmable.Verified(); verified {
+		return ErrEmailVerified
+	}
+	return nil
 }
 
-func (s *SendConfirmationRepository) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
-	return s.UpdateConfirmableFunc(ctx, email, confirmable)
+func NewSendConfirmation(options SendConfirmationOptions) *SendConfirmation {
+	return &SendConfirmation{options}
 }
