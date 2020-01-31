@@ -60,7 +60,8 @@ func (m *mockRequestResetPasswordRepository) UpdateRecoverable(ctx context.Conte
 
 func requestResetPasswordOptions(r *mockRequestResetPasswordRepository) passport.RequestResetPasswordOptions {
 	return passport.RequestResetPasswordOptions{
-		Repository: r,
+		Repository:     r,
+		TokenGenerator: passport.NewTokenGenerator(),
 	}
 }
 

@@ -80,7 +80,8 @@ func (m *mockSendConfirmationRepository) UpdateConfirmable(ctx context.Context, 
 
 func sendConfirmationOptions(r *mockSendConfirmationRepository) passport.SendConfirmationOptions {
 	return passport.SendConfirmationOptions{
-		Repository: r,
+		Repository:     r,
+		TokenGenerator: passport.NewTokenGenerator(),
 	}
 }
 

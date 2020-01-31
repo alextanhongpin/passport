@@ -21,6 +21,7 @@ type Auth struct {
 func NewAuth(db *sql.DB) *Auth {
 	r := passport.NewPostgres(db)
 	ec := passport.NewArgon2Password()
+	tokenGenerator := passport.NewTokenGenerator()
 	return &Auth{
 		login: passport.NewLogin(
 			passport.LoginOptions{
@@ -36,7 +37,8 @@ func NewAuth(db *sql.DB) *Auth {
 		),
 		changeEmail: passport.NewChangeEmail(
 			passport.ChangeEmailOptions{
-				Repository: r,
+				Repository:     r,
+				TokenGenerator: tokenGenerator,
 			},
 		),
 		changePassword: passport.NewChangePassword(
@@ -60,12 +62,14 @@ func NewAuth(db *sql.DB) *Auth {
 		),
 		sendConfirmation: passport.NewSendConfirmation(
 			passport.SendConfirmationOptions{
-				Repository: r,
+				Repository:     r,
+				TokenGenerator: tokenGenerator,
 			},
 		),
 		requestResetPassword: passport.NewRequestResetPassword(
 			passport.RequestResetPasswordOptions{
-				Repository: r,
+				Repository:     r,
+				TokenGenerator: tokenGenerator,
 			},
 		),
 	}

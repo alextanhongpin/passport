@@ -12,7 +12,8 @@ type (
 	}
 
 	RequestResetPasswordOptions struct {
-		Repository requestResetPasswordRepository
+		Repository     requestResetPasswordRepository
+		TokenGenerator tokenGenerator
 	}
 
 	RequestResetPassword struct {
@@ -25,8 +26,12 @@ func (r *RequestResetPassword) Exec(ctx context.Context, email Email) (string, e
 		return "", err
 	}
 
-	recoverable := NewRecoverable()
-	_, err := r.options.Repository.UpdateRecoverable(ctx, email.Value(), recoverable)
+	token, err := r.options.TokenGenerator.Generate()
+	if err != nil {
+		return "", nil
+	}
+	recoverable := NewRecoverable(token)
+	_, err = r.options.Repository.UpdateRecoverable(ctx, email.Value(), recoverable)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", ErrUserNotFound
 	}

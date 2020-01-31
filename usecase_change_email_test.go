@@ -106,7 +106,8 @@ func (m *mockChangeEmailRepository) UpdateConfirmable(ctx context.Context, email
 
 func changeEmailOptions(r *mockChangeEmailRepository) passport.ChangeEmailOptions {
 	return passport.ChangeEmailOptions{
-		Repository: r,
+		Repository:     r,
+		TokenGenerator: passport.NewTokenGenerator(),
 	}
 }
 

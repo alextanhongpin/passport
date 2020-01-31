@@ -80,19 +80,6 @@ func (c *ChangePassword) checkPasswordNotUsed(cipherText, plainText Password) er
 	return nil
 }
 
-type ChangePasswordRepository struct {
-	FindFunc           Find
-	UpdatePasswordFunc UpdatePassword
-}
-
-func (c *ChangePasswordRepository) Find(ctx context.Context, id string) (*User, error) {
-	return c.FindFunc(ctx, id)
-}
-
-func (c *ChangePasswordRepository) UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error) {
-	return c.UpdatePasswordFunc(ctx, userID, encryptedPassword)
-}
-
 func NewChangePassword(options ChangePasswordOptions) *ChangePassword {
 	return &ChangePassword{options}
 }

@@ -13,7 +13,8 @@ type (
 	}
 
 	SendConfirmationOptions struct {
-		Repository sendConfirmationRepository
+		Repository     sendConfirmationRepository
+		TokenGenerator tokenGenerator
 	}
 
 	SendConfirmation struct {
@@ -35,7 +36,11 @@ func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error
 		return "", err
 	}
 
-	confirmable := NewConfirmable(email.Value())
+	token, err := s.options.TokenGenerator.Generate()
+	if err != nil {
+		return "", err
+	}
+	confirmable := NewConfirmable(token, email.Value())
 	_, err = s.options.Repository.UpdateConfirmable(ctx, email.Value(), confirmable)
 	if err != nil {
 		return "", err

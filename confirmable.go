@@ -3,8 +3,6 @@ package passport
 import (
 	"errors"
 	"time"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 // ErrConfirmationRequired indicates that the email requires confirmation.
@@ -29,8 +27,7 @@ type Confirmable struct {
 	UnconfirmedEmail string `json:"unconfirmed_email,omitempty"`
 }
 
-// Valid checks if the confirmation token is still within the validity
-// period.
+// Valid checks if the confirmation token is still within the validity period.
 func (c Confirmable) Valid(ttl time.Duration) bool {
 	return time.Since(c.ConfirmationSentAt) < ttl
 }
@@ -65,9 +62,10 @@ func (c Confirmable) ValidateUnconfirmed() error {
 }
 
 // NewConfirmable returns a new Confirmable.
-func NewConfirmable(email string) Confirmable {
+func NewConfirmable(token, email string) Confirmable {
 	return Confirmable{
-		ConfirmationToken:  uuid.Must(uuid.NewV4()).String(),
+		// TODO: Customize factory.
+		ConfirmationToken:  token,
 		ConfirmationSentAt: time.Now(),
 		UnconfirmedEmail:   email,
 	}

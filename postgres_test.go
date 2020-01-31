@@ -158,11 +158,11 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	suite.db = database.DB()
 
 	a2 := passport.NewArgon2Password()
+	tg := passport.NewTokenGenerator()
 
 	suite.repository = passport.NewPostgres(suite.db)
 	suite.confirm = passport.NewConfirm(passport.ConfirmOptions{
-		Repository: suite.repository,
-
+		Repository:                suite.repository,
 		ConfirmationTokenValidity: passport.ConfirmationTokenValidity,
 	})
 	suite.login = passport.NewLogin(
@@ -175,7 +175,10 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 		passport.RegisterOptions{Repository: suite.repository, Encoder: a2},
 	)
 	suite.sendConfirmation = passport.NewSendConfirmation(
-		passport.SendConfirmationOptions{Repository: suite.repository},
+		passport.SendConfirmationOptions{
+			Repository:     suite.repository,
+			TokenGenerator: tg,
+		},
 	)
 	suite.changePassword = passport.NewChangePassword(
 		passport.ChangePasswordOptions{
@@ -185,7 +188,8 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	)
 	suite.requestResetPassword = passport.NewRequestResetPassword(
 		passport.RequestResetPasswordOptions{
-			Repository: suite.repository,
+			Repository:     suite.repository,
+			TokenGenerator: tg,
 		},
 	)
 	suite.resetPassword = passport.NewResetPassword(
@@ -197,7 +201,8 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	)
 	suite.changeEmail = passport.NewChangeEmail(
 		passport.ChangeEmailOptions{
-			Repository: suite.repository,
+			Repository:     suite.repository,
+			TokenGenerator: tg,
 		},
 	)
 }

@@ -14,7 +14,8 @@ type (
 	}
 
 	ChangeEmailOptions struct {
-		Repository changeEmailRepository
+		Repository     changeEmailRepository
+		TokenGenerator tokenGenerator
 	}
 
 	ChangeEmail struct {
@@ -36,17 +37,12 @@ func (c *ChangeEmail) Exec(ctx context.Context, currentUserID UserID, email Emai
 		return "", err
 	}
 
-	if err := c.checkEmailPresent(user); err != nil {
+	oldEmail, err := c.checkEmailPresent(user)
+	if err != nil {
 		return "", err
 	}
 
-	var confirmable = NewConfirmable(email.Value())
-	if _, err = c.options.Repository.UpdateConfirmable(ctx, user.Email, confirmable); err != nil {
-		return "", err
-	}
-
-	// Return the confirmable in order to send the email.
-	return confirmable.ConfirmationToken, nil
+	return c.createConfirmationToken(ctx, oldEmail, email)
 }
 
 func (c *ChangeEmail) validate(userID UserID, email Email) error {
@@ -81,12 +77,26 @@ func (c *ChangeEmail) findUser(ctx context.Context, userID UserID) (*User, error
 	return user, nil
 }
 
-func (c *ChangeEmail) checkEmailPresent(user *User) error {
+func (c *ChangeEmail) checkEmailPresent(user *User) (Email, error) {
 	email := NewEmail(user.Email)
 	if err := email.Validate(); err != nil {
-		return err
+		return email, err
 	}
-	return nil
+	return email, nil
+}
+
+func (c *ChangeEmail) createConfirmationToken(ctx context.Context, oldEmail, newEmail Email) (string, error) {
+	token, err := c.options.TokenGenerator.Generate()
+	if err != nil {
+		return "", err
+	}
+	confirmable := NewConfirmable(token, newEmail.Value())
+	if _, err = c.options.Repository.UpdateConfirmable(ctx, oldEmail.Value(), confirmable); err != nil {
+		return "", err
+	}
+
+	// Return the confirmable in order to send the email.
+	return confirmable.ConfirmationToken, nil
 }
 
 func NewChangeEmail(opts ChangeEmailOptions) *ChangeEmail {
