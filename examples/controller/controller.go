@@ -3,11 +3,8 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 
-	"github.com/alextanhongpin/passport"
 	"github.com/alextanhongpin/passport/examples/api"
 	"github.com/alextanhongpin/passport/examples/service"
 	"github.com/alextanhongpin/pkg/gojwt"
@@ -43,29 +40,14 @@ func (ctl *Controller) PostLogin(w http.ResponseWriter, r *http.Request, ps http
 	}
 	ctx := r.Context()
 	res, err := ctl.service.Login(ctx, req)
-	if errors.Is(passport.ErrConfirmationRequired, err) {
-		// Send confirmation error.
-		res, err := ctl.service.SendConfirmation(ctx, service.SendConfirmationRequest{
-			Email: req.Email,
-		})
-		if err != nil {
-			api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
-			return
-		}
-		fmt.Printf(`
-Hi %s,
-
-Confirm your email address here:
-%s
-		`, req.Email, res.Token)
-		api.ResponseJSON(w, api.M{
-			"success": true,
-			"message": "confirmation email sent",
-		}, http.StatusOK)
-		return
-	}
 	if err != nil {
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		return
+	}
+	if res == nil {
+		api.ResponseJSON(w, api.M{
+			"message": "Please confirm your email",
+		}, http.StatusOK)
 		return
 	}
 	token, err := ctl.signer.Sign(func(c *gojwt.Claims) error {
@@ -76,7 +58,6 @@ Confirm your email address here:
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-
 	api.ResponseJSON(w, api.M{
 		"access_token": token,
 	}, http.StatusOK)
@@ -162,8 +143,6 @@ func (ctl *Controller) PostSendConfirmation(w http.ResponseWriter, r *http.Reque
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	// TODO: Send email here.
-	fmt.Printf("Confirm your email address: %s", res.Token)
 	api.ResponseJSON(w, res, http.StatusBadRequest)
 }
 
@@ -192,7 +171,5 @@ func (ctl *Controller) PostRequestResetPassword(w http.ResponseWriter, r *http.R
 		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	// TODO: Send email here.
-	fmt.Printf(`Reset your password: %s`, res.Token)
 	api.ResponseJSON(w, res, http.StatusBadRequest)
 }

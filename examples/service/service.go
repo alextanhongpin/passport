@@ -3,9 +3,15 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/examples/mailer"
 )
+
+type stdoutMailer interface {
+	Send(mailer.Mail) error
+}
 
 type Auth struct {
 	login                *passport.Login
@@ -16,13 +22,16 @@ type Auth struct {
 	resetPassword        *passport.ResetPassword
 	sendConfirmation     *passport.SendConfirmation
 	requestResetPassword *passport.RequestResetPassword
+	mailer               stdoutMailer
 }
 
 func NewAuth(db *sql.DB) *Auth {
 	r := passport.NewPostgres(db)
 	ec := passport.NewArgon2Password()
 	tokenGenerator := passport.NewTokenGenerator()
+	m := mailer.NewNoopMailer()
 	return &Auth{
+		mailer: m,
 		login: passport.NewLogin(
 			passport.LoginOptions{
 				Repository: r,
@@ -81,12 +90,18 @@ type (
 		Password string `json:"password"`
 	}
 	LoginResponse struct {
-		User passport.User `json:"user"`
+		User passport.User
 	}
 )
 
 func (a *Auth) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	user, err := a.login.Exec(ctx, passport.NewCredential(req.Email, req.Password))
+	if errors.Is(passport.ErrConfirmationRequired, err) {
+		_, err = a.SendConfirmation(ctx, SendConfirmationRequest{
+			Email: req.Email,
+		})
+		return nil, err
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +136,6 @@ type (
 		Email         string `json:"email"`
 	}
 	ChangeEmailResponse struct {
-		Token string `json:"token"`
 	}
 )
 
@@ -130,9 +144,13 @@ func (a *Auth) ChangeEmail(ctx context.Context, req ChangeEmailRequest) (*Change
 	if err != nil {
 		return nil, err
 	}
-	return &ChangeEmailResponse{
-		Token: token,
-	}, nil
+
+	mail := mailer.NewChangeEmail(req.Email, token)
+	if err := a.mailer.Send(mail); err != nil {
+		return nil, err
+	}
+
+	return &ChangeEmailResponse{}, nil
 }
 
 type (
@@ -203,7 +221,6 @@ type (
 		Email string `json:"email"`
 	}
 	SendConfirmationResponse struct {
-		Token string `json:"token"`
 	}
 )
 
@@ -212,9 +229,11 @@ func (a *Auth) SendConfirmation(ctx context.Context, req SendConfirmationRequest
 	if err != nil {
 		return nil, err
 	}
-	return &SendConfirmationResponse{
-		Token: token,
-	}, nil
+	mail := mailer.NewSendConfirmation(req.Email, token)
+	if err := a.mailer.Send(mail); err != nil {
+		return nil, err
+	}
+	return &SendConfirmationResponse{}, nil
 }
 
 type (
@@ -222,7 +241,6 @@ type (
 		Email string `json:"email"`
 	}
 	RequestResetPasswordResponse struct {
-		Token string `json:"token"`
 	}
 )
 
@@ -231,7 +249,11 @@ func (a *Auth) RequestResetPassword(ctx context.Context, req RequestResetPasswor
 	if err != nil {
 		return nil, err
 	}
-	return &RequestResetPasswordResponse{
-		Token: token,
-	}, nil
+
+	mail := mailer.NewResetPassword(req.Email, token)
+	if err := a.mailer.Send(mail); err != nil {
+		return nil, err
+	}
+
+	return &RequestResetPasswordResponse{}, nil
 }
