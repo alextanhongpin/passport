@@ -63,6 +63,7 @@ func (l *Login) findUser(ctx context.Context, email Email) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
@@ -73,6 +74,7 @@ func (l *Login) checkPasswordMatch(cipherText, plainText Password) error {
 	); err != nil {
 		return ErrEmailOrPasswordInvalid
 	}
+
 	return nil
 }
 

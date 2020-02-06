@@ -30,6 +30,7 @@ func (r *RequestResetPassword) Exec(ctx context.Context, email Email) (string, e
 	if err != nil {
 		return "", nil
 	}
+
 	recoverable := NewRecoverable(token)
 	_, err = r.options.Repository.UpdateRecoverable(ctx, email.Value(), recoverable)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -39,8 +40,6 @@ func (r *RequestResetPassword) Exec(ctx context.Context, email Email) (string, e
 		return "", err
 	}
 
-	// TODO: Allow token to be customized.
-	// Return enough data for us to send the email.
 	return recoverable.ResetPasswordToken, nil
 }
 

@@ -71,6 +71,7 @@ func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirm
 	if err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
@@ -84,6 +85,7 @@ func (r *ResetPassword) validate(token Token, password, confirmPassword Password
 	if err := password.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -95,6 +97,7 @@ func (r *ResetPassword) findUser(ctx context.Context, token Token) (*User, error
 	if err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
@@ -105,6 +108,7 @@ func (r *ResetPassword) checkCanResetPassword(recoverable Recoverable) error {
 	if !recoverable.AllowPasswordChange {
 		return ErrPasswordChangeNotAllowed
 	}
+
 	return nil
 }
 
@@ -115,6 +119,7 @@ func (r *ResetPassword) checkPasswordNotReused(cipherText, plainText Password) e
 	); err == nil {
 		return ErrPasswordUsed
 	}
+
 	return nil
 }
 

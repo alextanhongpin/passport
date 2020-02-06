@@ -58,6 +58,7 @@ func (c *Confirm) findUser(ctx context.Context, token Token) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 

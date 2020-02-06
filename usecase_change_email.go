@@ -52,6 +52,7 @@ func (c *ChangeEmail) validate(userID UserID, email Email) error {
 	if err := userID.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -63,6 +64,7 @@ func (c *ChangeEmail) checkEmailExists(ctx context.Context, email Email) error {
 	if exists {
 		return ErrEmailExists
 	}
+
 	return nil
 }
 
@@ -74,6 +76,7 @@ func (c *ChangeEmail) findUser(ctx context.Context, userID UserID) (*User, error
 	if err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
@@ -82,6 +85,7 @@ func (c *ChangeEmail) checkEmailPresent(user *User) (Email, error) {
 	if err := email.Validate(); err != nil {
 		return email, err
 	}
+
 	return email, nil
 }
 
@@ -90,12 +94,12 @@ func (c *ChangeEmail) createConfirmationToken(ctx context.Context, oldEmail, new
 	if err != nil {
 		return "", err
 	}
+
 	confirmable := NewConfirmable(token, newEmail.Value())
 	if _, err = c.options.Repository.UpdateConfirmable(ctx, oldEmail.Value(), confirmable); err != nil {
 		return "", err
 	}
 
-	// Return the confirmable in order to send the email.
 	return confirmable.ConfirmationToken, nil
 }
 

@@ -38,10 +38,12 @@ func (c *ChangePassword) Exec(ctx context.Context, currentUserID UserID, passwor
 	); err != nil {
 		return err
 	}
+
 	cipherText, err := c.options.EncoderComparer.Encode(password.Byte())
 	if err != nil {
 		return err
 	}
+
 	_, err = c.options.Repository.UpdatePassword(ctx, currentUserID.Value(), cipherText)
 	return err
 }
@@ -50,12 +52,15 @@ func (c *ChangePassword) validate(userID UserID, password, confirmPassword Passw
 	if err := password.Equal(confirmPassword); err != nil {
 		return err
 	}
+
 	if err := password.Validate(); err != nil {
 		return err
 	}
+
 	if err := userID.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -64,9 +69,11 @@ func (c *ChangePassword) findUser(ctx context.Context, userID UserID) (*User, er
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return user, nil
 }
 
@@ -77,6 +84,7 @@ func (c *ChangePassword) checkPasswordNotUsed(cipherText, plainText Password) er
 	); err == nil {
 		return ErrPasswordUsed
 	}
+
 	return nil
 }
 

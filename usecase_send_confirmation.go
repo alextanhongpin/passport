@@ -46,7 +46,6 @@ func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error
 		return "", err
 	}
 
-	// Return the confirmable in order to send the email.
 	return confirmable.ConfirmationToken, nil
 }
 
