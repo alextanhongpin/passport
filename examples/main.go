@@ -26,7 +26,7 @@ func main() {
 		ExpiresAfter: 1 * time.Hour,
 	})
 	svc := service.NewAuth(db)
-	ctl := controller.New(svc, signer)
+	ctl := controller.New(svc)
 
 	router := httprouter.New()
 	router.GET("/", indexHandler)
@@ -45,5 +45,5 @@ func main() {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	api.ResponseJSON(w, api.M{"ok": true}, http.StatusOK)
+	api.JSON(w, api.M{"ok": true}, http.StatusOK)
 }
