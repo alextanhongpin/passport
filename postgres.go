@@ -16,6 +16,26 @@ func NewPostgres(db *sql.DB) *Postgres {
 	return &Postgres{db}
 }
 
+func NewNullString(str string) sql.NullString {
+	if str == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{
+		Valid:  true,
+		String: str,
+	}
+}
+
+func NewNullTime(t time.Time) sql.NullTime {
+	if t.IsZero() {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{
+		Valid: true,
+		Time:  t,
+	}
+}
+
 func (p *Postgres) WithEmail(ctx context.Context, email string) (*User, error) {
 	stmt := `
 		SELECT 	id,
@@ -57,19 +77,9 @@ func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recovera
 			allow_password_change = $3
 		WHERE 	email = $4
 	`
-
-	var resetPasswordToken *string
-	if recoverable.ResetPasswordToken != "" {
-		resetPasswordToken = &recoverable.ResetPasswordToken
-	}
-
-	var resetPasswordSentAt *time.Time
-	if !recoverable.ResetPasswordSentAt.IsZero() {
-		resetPasswordSentAt = &recoverable.ResetPasswordSentAt
-	}
 	res, err := p.db.Exec(stmt,
-		resetPasswordToken,
-		resetPasswordSentAt,
+		NewNullString(recoverable.ResetPasswordToken),
+		NewNullTime(recoverable.ResetPasswordSentAt),
 		recoverable.AllowPasswordChange,
 		email,
 	)
@@ -124,22 +134,10 @@ func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirma
 		WHERE 	email = $5
 	`
 
-	var confirmationToken *string
-	if confirmable.ConfirmationToken != "" {
-		confirmationToken = &confirmable.ConfirmationToken
-	}
-	var confirmationTokenSentAt *time.Time
-	if !confirmable.ConfirmationSentAt.IsZero() {
-		confirmationTokenSentAt = &confirmable.ConfirmationSentAt
-	}
-	var confirmedAt *time.Time
-	if !confirmable.ConfirmedAt.IsZero() {
-		confirmedAt = &confirmable.ConfirmedAt
-	}
 	res, err := p.db.Exec(stmt,
-		confirmationToken,
-		confirmationTokenSentAt,
-		confirmedAt,
+		NewNullString(confirmable.ConfirmationToken),
+		NewNullTime(confirmable.ConfirmationSentAt),
+		NewNullTime(confirmable.ConfirmedAt),
 		confirmable.UnconfirmedEmail,
 		email,
 	)

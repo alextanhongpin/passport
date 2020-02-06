@@ -7,7 +7,6 @@ import (
 
 	"github.com/alextanhongpin/passport/examples/api"
 	"github.com/alextanhongpin/passport/examples/service"
-	"github.com/alextanhongpin/pkg/gojwt"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -25,151 +24,127 @@ type Service interface {
 
 type Controller struct {
 	service Service
-	signer  gojwt.Signer
 }
 
-func New(service Service, signer gojwt.Signer) *Controller {
-	return &Controller{service, signer}
+func New(service Service) *Controller {
+	return &Controller{service}
 }
 
 func (ctl *Controller) PostLogin(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var req service.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	ctx := r.Context()
 	res, err := ctl.service.Login(ctx, req)
 	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	if res == nil {
-		api.ResponseJSON(w, api.M{
+		api.JSON(w, api.M{
 			"message": "Please confirm your email",
 		}, http.StatusOK)
 		return
 	}
-	token, err := ctl.signer.Sign(func(c *gojwt.Claims) error {
-		c.StandardClaims.Subject = res.User.ID
-		return nil
-	})
-	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
-		return
-	}
-	api.ResponseJSON(w, api.M{
-		"access_token": token,
-	}, http.StatusOK)
+	api.JSON(w, res, http.StatusOK)
 }
 
 func (ctl *Controller) PostRegister(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var req service.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	res, err := ctl.service.Register(r.Context(), req)
 	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-
-	// Build JWT Token here. Allow login for the first time even if the
-	// email is not confirmed.
-	token, err := ctl.signer.Sign(func(c *gojwt.Claims) error {
-		c.StandardClaims.Subject = res.User.ID
-		return nil
-	})
-	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
-		return
-	}
-	api.ResponseJSON(w, api.M{
-		"access_token": token,
-	}, http.StatusOK)
+	api.JSON(w, res, http.StatusOK)
 }
 
 func (ctl *Controller) PostChangeEmail(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var req service.ChangeEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	res, err := ctl.service.ChangeEmail(r.Context(), req)
 	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	api.ResponseJSON(w, res, http.StatusOK)
+	api.JSON(w, res, http.StatusOK)
 }
 
 func (ctl *Controller) PutChangePassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var req service.ChangePasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	res, err := ctl.service.ChangePassword(r.Context(), req)
 	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	api.ResponseJSON(w, res, http.StatusOK)
+	api.JSON(w, res, http.StatusOK)
 }
 
 func (ctl *Controller) PutConfirm(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var req service.ConfirmRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	res, err := ctl.service.Confirm(r.Context(), req)
 	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	api.ResponseJSON(w, res, http.StatusBadRequest)
+	api.JSON(w, res, http.StatusBadRequest)
 }
 
 func (ctl *Controller) PostSendConfirmation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var req service.SendConfirmationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	res, err := ctl.service.SendConfirmation(r.Context(), req)
 	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	api.ResponseJSON(w, res, http.StatusBadRequest)
+	api.JSON(w, res, http.StatusBadRequest)
 }
 
 func (ctl *Controller) PutResetPassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var req service.ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	res, err := ctl.service.ResetPassword(r.Context(), req)
 	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	api.ResponseJSON(w, res, http.StatusBadRequest)
+	api.JSON(w, res, http.StatusBadRequest)
 }
 
 func (ctl *Controller) PostRequestResetPassword(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var req service.RequestResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
 	res, err := ctl.service.RequestResetPassword(r.Context(), req)
 	if err != nil {
-		api.ResponseJSON(w, api.NewError(err), http.StatusBadRequest)
+		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	api.ResponseJSON(w, res, http.StatusBadRequest)
+	api.JSON(w, res, http.StatusBadRequest)
 }

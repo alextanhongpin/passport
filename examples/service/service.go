@@ -7,6 +7,7 @@ import (
 
 	"github.com/alextanhongpin/passport"
 	"github.com/alextanhongpin/passport/examples/mailer"
+	"github.com/alextanhongpin/pkg/gojwt"
 )
 
 type stdoutMailer interface {
@@ -22,7 +23,9 @@ type Auth struct {
 	resetPassword        *passport.ResetPassword
 	sendConfirmation     *passport.SendConfirmation
 	requestResetPassword *passport.RequestResetPassword
-	mailer               stdoutMailer
+
+	mailer stdoutMailer
+	signer gojwt.Signer
 }
 
 func NewAuth(db *sql.DB) *Auth {
@@ -90,7 +93,7 @@ type (
 		Password string `json:"password"`
 	}
 	LoginResponse struct {
-		User passport.User
+		Token string `json:"token"`
 	}
 )
 
@@ -105,8 +108,15 @@ func (a *Auth) Login(ctx context.Context, req LoginRequest) (*LoginResponse, err
 	if err != nil {
 		return nil, err
 	}
+	token, err := a.signer.Sign(func(c *gojwt.Claims) error {
+		c.StandardClaims.Subject = user.ID
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &LoginResponse{
-		User: *user,
+		Token: token,
 	}, nil
 }
 
@@ -116,7 +126,7 @@ type (
 		Password string `json:"password"`
 	}
 	RegisterResponse struct {
-		User passport.User `json:"user"`
+		Token string `json:"token"`
 	}
 )
 
@@ -125,8 +135,15 @@ func (a *Auth) Register(ctx context.Context, req RegisterRequest) (*RegisterResp
 	if err != nil {
 		return nil, err
 	}
+	token, err := a.signer.Sign(func(c *gojwt.Claims) error {
+		c.StandardClaims.Subject = user.ID
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	return &RegisterResponse{
-		User: *user,
+		Token: token,
 	}, nil
 }
 
