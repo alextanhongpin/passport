@@ -36,18 +36,19 @@ func (ctl *Controller) PostLogin(w http.ResponseWriter, r *http.Request, ps http
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
-	ctx := r.Context()
-	res, err := ctl.service.Login(ctx, req)
+	res, err := ctl.service.Login(r.Context(), req)
 	if err != nil {
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	if res == nil {
 		api.JSON(w, api.M{
 			"message": "Please confirm your email",
 		}, http.StatusOK)
 		return
 	}
+
 	api.JSON(w, res, http.StatusOK)
 }
 
@@ -57,11 +58,13 @@ func (ctl *Controller) PostRegister(w http.ResponseWriter, r *http.Request, ps h
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	res, err := ctl.service.Register(r.Context(), req)
 	if err != nil {
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	api.JSON(w, res, http.StatusOK)
 }
 
@@ -71,11 +74,13 @@ func (ctl *Controller) PostChangeEmail(w http.ResponseWriter, r *http.Request, p
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	res, err := ctl.service.ChangeEmail(r.Context(), req)
 	if err != nil {
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	api.JSON(w, res, http.StatusOK)
 }
 
@@ -85,11 +90,13 @@ func (ctl *Controller) PutChangePassword(w http.ResponseWriter, r *http.Request,
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	res, err := ctl.service.ChangePassword(r.Context(), req)
 	if err != nil {
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	api.JSON(w, res, http.StatusOK)
 }
 
@@ -99,11 +106,13 @@ func (ctl *Controller) PutConfirm(w http.ResponseWriter, r *http.Request, ps htt
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	res, err := ctl.service.Confirm(r.Context(), req)
 	if err != nil {
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	api.JSON(w, res, http.StatusBadRequest)
 }
 
@@ -113,11 +122,13 @@ func (ctl *Controller) PostSendConfirmation(w http.ResponseWriter, r *http.Reque
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	res, err := ctl.service.SendConfirmation(r.Context(), req)
 	if err != nil {
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	api.JSON(w, res, http.StatusBadRequest)
 }
 
@@ -127,11 +138,13 @@ func (ctl *Controller) PutResetPassword(w http.ResponseWriter, r *http.Request, 
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	res, err := ctl.service.ResetPassword(r.Context(), req)
 	if err != nil {
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	api.JSON(w, res, http.StatusBadRequest)
 }
 
@@ -141,10 +154,12 @@ func (ctl *Controller) PostRequestResetPassword(w http.ResponseWriter, r *http.R
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	res, err := ctl.service.RequestResetPassword(r.Context(), req)
 	if err != nil {
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
+
 	api.JSON(w, res, http.StatusBadRequest)
 }

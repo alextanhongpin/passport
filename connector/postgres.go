@@ -1,9 +1,11 @@
-package passport
+package connector
 
 import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/alextanhongpin/passport"
 )
 
 // Postgres represents an implementation of the repository for User.
@@ -36,7 +38,7 @@ func NewNullTime(t time.Time) sql.NullTime {
 	}
 }
 
-func (p *Postgres) WithEmail(ctx context.Context, email string) (*User, error) {
+func (p *Postgres) WithEmail(ctx context.Context, email string) (*passport.User, error) {
 	stmt := `
 		SELECT 	id,
 			created_at,
@@ -55,21 +57,21 @@ func (p *Postgres) WithEmail(ctx context.Context, email string) (*User, error) {
 	return getUser(p.db, stmt, email)
 }
 
-func (p *Postgres) Create(ctx context.Context, email, encryptedPassword string) (*User, error) {
+func (p *Postgres) Create(ctx context.Context, email, encryptedPassword string) (*passport.User, error) {
 	stmt := `
 		INSERT INTO login 
 			(email, encrypted_password, unconfirmed_email)
 		VALUES 	($1, $2, $1)
 		RETURNING id
 	`
-	var u User
+	var u passport.User
 	if err := p.db.QueryRow(stmt, email, encryptedPassword).Scan(&u.ID); err != nil {
 		return nil, err
 	}
 	return &u, nil
 }
 
-func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error) {
+func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recoverable passport.Recoverable) (bool, error) {
 	stmt := `
 		UPDATE  login
 		SET 	reset_password_token = $1,
@@ -90,7 +92,7 @@ func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recovera
 	return rows > 0, err
 }
 
-func (p *Postgres) WithResetPasswordToken(ctx context.Context, token string) (*User, error) {
+func (p *Postgres) WithResetPasswordToken(ctx context.Context, token string) (*passport.User, error) {
 	stmt := `
 		SELECT 	id,
 			created_at,
@@ -123,7 +125,7 @@ func (p *Postgres) UpdatePassword(ctx context.Context, userID string, encryptedP
 	return rows > 0, err
 }
 
-func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error) {
+func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirmable passport.Confirmable) (bool, error) {
 	stmt := `
 		UPDATE 	login
 		SET 	email = COALESCE(NULLIF($4, ''), email),
@@ -148,7 +150,7 @@ func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirma
 	return rows > 0, err
 }
 
-func (p *Postgres) WithConfirmationToken(ctx context.Context, token string) (*User, error) {
+func (p *Postgres) WithConfirmationToken(ctx context.Context, token string) (*passport.User, error) {
 	stmt := `
 		SELECT 	id,
 			created_at,
@@ -178,7 +180,7 @@ func (p *Postgres) HasEmail(ctx context.Context, email string) (bool, error) {
 	return exists, nil
 }
 
-func (p *Postgres) Find(ctx context.Context, id string) (*User, error) {
+func (p *Postgres) Find(ctx context.Context, id string) (*passport.User, error) {
 	stmt := `
 		SELECT 	id,
 			created_at,
@@ -197,8 +199,8 @@ func (p *Postgres) Find(ctx context.Context, id string) (*User, error) {
 	return getUser(p.db, stmt, id)
 }
 
-func getUser(db *sql.DB, stmt string, arguments ...interface{}) (*User, error) {
-	var u User
+func getUser(db *sql.DB, stmt string, arguments ...interface{}) (*passport.User, error) {
+	var u passport.User
 	var resetPasswordToken, confirmationToken sql.NullString
 	var resetPasswordSentAt, confirmationSentAt, confirmedAt sql.NullTime
 	var encryptedPassword string
@@ -233,6 +235,6 @@ func getUser(db *sql.DB, stmt string, arguments ...interface{}) (*User, error) {
 	if confirmedAt.Valid {
 		u.Confirmable.ConfirmedAt = confirmedAt.Time
 	}
-	u.EncryptedPassword = NewPassword(encryptedPassword)
+	u.EncryptedPassword = passport.NewPassword(encryptedPassword)
 	return &u, nil
 }

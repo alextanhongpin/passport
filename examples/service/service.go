@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/connector"
 	"github.com/alextanhongpin/passport/examples/mailer"
 	"github.com/alextanhongpin/pkg/gojwt"
 )
@@ -29,10 +30,11 @@ type Auth struct {
 }
 
 func NewAuth(db *sql.DB) *Auth {
-	r := passport.NewPostgres(db)
+	r := connector.NewPostgres(db)
 	ec := passport.NewArgon2Password()
 	tokenGenerator := passport.NewTokenGenerator()
 	m := mailer.NewNoopMailer()
+
 	return &Auth{
 		mailer: m,
 		login: passport.NewLogin(

@@ -1,4 +1,4 @@
-package passport_test
+package connector_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/connector"
 	"github.com/alextanhongpin/passport/examples/database"
 
 	"github.com/stretchr/testify/suite"
@@ -23,13 +24,13 @@ func TestMain(m *testing.M) {
 type TestPostgresSuite struct {
 	suite.Suite
 	db         *sql.DB
-	repository *passport.Postgres
+	repository *connector.Postgres
 	user       *passport.User
 }
 
 func (suite *TestPostgresSuite) SetupSuite() {
 	suite.db = database.DB()
-	suite.repository = passport.NewPostgres(suite.db)
+	suite.repository = connector.NewPostgres(suite.db)
 }
 
 func (suite *TestPostgresSuite) SetupTest() {
@@ -139,7 +140,7 @@ func TestPostgresTestSuite(t *testing.T) {
 type TestAuthenticateSuite struct {
 	suite.Suite
 	db               *sql.DB
-	repository       *passport.Postgres
+	repository       *connector.Postgres
 	id               string
 	confirm          *passport.Confirm
 	login            *passport.Login
@@ -160,7 +161,7 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	a2 := passport.NewArgon2Password()
 	tg := passport.NewTokenGenerator()
 
-	suite.repository = passport.NewPostgres(suite.db)
+	suite.repository = connector.NewPostgres(suite.db)
 	suite.confirm = passport.NewConfirm(passport.ConfirmOptions{
 		Repository:                suite.repository,
 		ConfirmationTokenValidity: passport.ConfirmationTokenValidity,

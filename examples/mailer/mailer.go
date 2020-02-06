@@ -31,6 +31,7 @@ func (n *NoopMailer) Send(mail Mail) error {
 To: %s
 Subject: %s
 Body:
+
 %s`,
 		mail.From,
 		mail.To,
@@ -45,10 +46,7 @@ func NewChangeEmail(to, token string) Mail {
 		From:    from,
 		To:      to,
 		Subject: "Change your Email",
-		Body: fmt.Sprintf(`Confirm your email to change by clicking on this link:
-
-Token: %s
-		`, token),
+		Body:    fmt.Sprintf(`Your confirm email token: %s`, token),
 	}
 }
 
@@ -56,8 +54,8 @@ func NewSendConfirmation(to, token string) Mail {
 	return Mail{
 		From:    from,
 		To:      to,
-		Subject: "Confirm your email",
-		Body:    fmt.Sprintf(`Confirm your email address: %s`, token),
+		Subject: "Confirm your Email",
+		Body:    fmt.Sprintf(`Your confirm email token: %s`, token),
 	}
 }
 
@@ -65,7 +63,7 @@ func NewResetPassword(to, token string) Mail {
 	return Mail{
 		From:    from,
 		To:      to,
-		Subject: "Reset your password",
-		Body:    fmt.Sprintf(`Reset your password: %s`, token),
+		Subject: "Reset your Password",
+		Body:    fmt.Sprintf(`Your reset password token: %s`, token),
 	}
 }
