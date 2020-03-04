@@ -9,6 +9,7 @@ import (
 	"github.com/alextanhongpin/passport"
 	"github.com/alextanhongpin/passport/connector"
 	"github.com/alextanhongpin/passport/examples/database"
+	"github.com/alextanhongpin/passport/usecase"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -142,17 +143,17 @@ type TestAuthenticateSuite struct {
 	db               *sql.DB
 	repository       *connector.Postgres
 	id               string
-	confirm          *passport.Confirm
-	login            *passport.Login
-	register         *passport.Register
-	sendConfirmation *passport.SendConfirmation
+	confirm          *usecase.Confirm
+	login            *usecase.Login
+	register         *usecase.Register
+	sendConfirmation *usecase.SendConfirmation
 	cred             passport.Credential
 
 	// Password.
-	changePassword       *passport.ChangePassword
-	requestResetPassword *passport.RequestResetPassword
-	resetPassword        *passport.ResetPassword
-	changeEmail          *passport.ChangeEmail
+	changePassword       *usecase.ChangePassword
+	requestResetPassword *usecase.RequestResetPassword
+	resetPassword        *usecase.ResetPassword
+	changeEmail          *usecase.ChangeEmail
 }
 
 func (suite *TestAuthenticateSuite) SetupSuite() {
@@ -162,46 +163,46 @@ func (suite *TestAuthenticateSuite) SetupSuite() {
 	tg := passport.NewTokenGenerator()
 
 	suite.repository = connector.NewPostgres(suite.db)
-	suite.confirm = passport.NewConfirm(passport.ConfirmOptions{
+	suite.confirm = usecase.NewConfirm(usecase.ConfirmOptions{
 		Repository:                suite.repository,
 		ConfirmationTokenValidity: passport.ConfirmationTokenValidity,
 	})
-	suite.login = passport.NewLogin(
-		passport.LoginOptions{
+	suite.login = usecase.NewLogin(
+		usecase.LoginOptions{
 			Repository: suite.repository,
 			Comparer:   a2,
 		},
 	)
-	suite.register = passport.NewRegister(
-		passport.RegisterOptions{Repository: suite.repository, Encoder: a2},
+	suite.register = usecase.NewRegister(
+		usecase.RegisterOptions{Repository: suite.repository, Encoder: a2},
 	)
-	suite.sendConfirmation = passport.NewSendConfirmation(
-		passport.SendConfirmationOptions{
+	suite.sendConfirmation = usecase.NewSendConfirmation(
+		usecase.SendConfirmationOptions{
 			Repository:     suite.repository,
 			TokenGenerator: tg,
 		},
 	)
-	suite.changePassword = passport.NewChangePassword(
-		passport.ChangePasswordOptions{
+	suite.changePassword = usecase.NewChangePassword(
+		usecase.ChangePasswordOptions{
 			Repository:      suite.repository,
 			EncoderComparer: a2,
 		},
 	)
-	suite.requestResetPassword = passport.NewRequestResetPassword(
-		passport.RequestResetPasswordOptions{
+	suite.requestResetPassword = usecase.NewRequestResetPassword(
+		usecase.RequestResetPasswordOptions{
 			Repository:     suite.repository,
 			TokenGenerator: tg,
 		},
 	)
-	suite.resetPassword = passport.NewResetPassword(
-		passport.ResetPasswordOptions{
+	suite.resetPassword = usecase.NewResetPassword(
+		usecase.ResetPasswordOptions{
 			Repository:               suite.repository,
 			EncoderComparer:          a2,
 			RecoverableTokenValidity: passport.RecoverableTokenValidity,
 		},
 	)
-	suite.changeEmail = passport.NewChangeEmail(
-		passport.ChangeEmailOptions{
+	suite.changeEmail = usecase.NewChangeEmail(
+		usecase.ChangeEmailOptions{
 			Repository:     suite.repository,
 			TokenGenerator: tg,
 		},

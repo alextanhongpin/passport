@@ -1,4 +1,4 @@
-package passport_test
+package usecase_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/usecase"
 	"github.com/alextanhongpin/passwd"
 	"github.com/stretchr/testify/assert"
 )
@@ -159,8 +160,8 @@ func (m *mockResetPasswordRepository) UpdateRecoverable(ctx context.Context, ema
 	return m.updateRecoverableResponse, m.updateRecoverableError
 }
 
-func resetPasswordOptions(r *mockResetPasswordRepository) passport.ResetPasswordOptions {
-	return passport.ResetPasswordOptions{
+func resetPasswordOptions(r *mockResetPasswordRepository) usecase.ResetPasswordOptions {
+	return usecase.ResetPasswordOptions{
 		Repository:               r,
 		EncoderComparer:          passport.NewArgon2Password(),
 		RecoverableTokenValidity: passport.RecoverableTokenValidity,
@@ -168,7 +169,7 @@ func resetPasswordOptions(r *mockResetPasswordRepository) passport.ResetPassword
 }
 
 func resetPassword(r *mockResetPasswordRepository, token, password, confirmPassword string) (*passport.User, error) {
-	return passport.NewResetPassword(resetPasswordOptions(r)).Exec(
+	return usecase.NewResetPassword(resetPasswordOptions(r)).Exec(
 		context.TODO(),
 		passport.NewToken(token),
 		passport.NewPassword(password),

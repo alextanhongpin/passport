@@ -1,14 +1,16 @@
-package passport
+package usecase
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/alextanhongpin/passport"
 )
 
 type (
 	requestResetPasswordRepository interface {
-		UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
+		UpdateRecoverable(ctx context.Context, email string, recoverable passport.Recoverable) (bool, error)
 	}
 
 	RequestResetPasswordOptions struct {
@@ -21,7 +23,7 @@ type (
 	}
 )
 
-func (r *RequestResetPassword) Exec(ctx context.Context, email Email) (string, error) {
+func (r *RequestResetPassword) Exec(ctx context.Context, email passport.Email) (string, error) {
 	if err := email.Validate(); err != nil {
 		return "", err
 	}
@@ -31,10 +33,10 @@ func (r *RequestResetPassword) Exec(ctx context.Context, email Email) (string, e
 		return "", nil
 	}
 
-	recoverable := NewRecoverable(token)
+	recoverable := passport.NewRecoverable(token)
 	_, err = r.options.Repository.UpdateRecoverable(ctx, email.Value(), recoverable)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", ErrUserNotFound
+		return "", passport.ErrUserNotFound
 	}
 	if err != nil {
 		return "", err

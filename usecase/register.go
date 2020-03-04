@@ -1,12 +1,14 @@
-package passport
+package usecase
 
 import (
 	"context"
+
+	"github.com/alextanhongpin/passport"
 )
 
 type (
 	registerRepository interface {
-		Create(ctx context.Context, email, password string) (*User, error)
+		Create(ctx context.Context, email, password string) (*passport.User, error)
 	}
 
 	RegisterOptions struct {
@@ -19,7 +21,7 @@ type (
 	}
 )
 
-func (r *Register) Exec(ctx context.Context, cred Credential) (*User, error) {
+func (r *Register) Exec(ctx context.Context, cred passport.Credential) (*passport.User, error) {
 	if err := r.validate(cred); err != nil {
 		return nil, err
 	}
@@ -32,7 +34,7 @@ func (r *Register) Exec(ctx context.Context, cred Credential) (*User, error) {
 	return r.createAccount(ctx, cred.Email.Value(), cipherText)
 }
 
-func (r *Register) validate(cred Credential) error {
+func (r *Register) validate(cred passport.Credential) error {
 	return cred.Validate()
 }
 
@@ -41,7 +43,7 @@ func (r *Register) encryptPassword(password []byte) (string, error) {
 	return cipherText, err
 }
 
-func (r *Register) createAccount(ctx context.Context, email, password string) (*User, error) {
+func (r *Register) createAccount(ctx context.Context, email, password string) (*passport.User, error) {
 	return r.options.Repository.Create(ctx, email, password)
 }
 

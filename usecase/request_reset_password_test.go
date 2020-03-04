@@ -1,4 +1,4 @@
-package passport_test
+package usecase_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/usecase"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -58,15 +59,15 @@ func (m *mockRequestResetPasswordRepository) UpdateRecoverable(ctx context.Conte
 	return m.updateRecoverableResponse, m.updateRecoverableError
 }
 
-func requestResetPasswordOptions(r *mockRequestResetPasswordRepository) passport.RequestResetPasswordOptions {
-	return passport.RequestResetPasswordOptions{
+func requestResetPasswordOptions(r *mockRequestResetPasswordRepository) usecase.RequestResetPasswordOptions {
+	return usecase.RequestResetPasswordOptions{
 		Repository:     r,
 		TokenGenerator: passport.NewTokenGenerator(),
 	}
 }
 
 func requestResetPassword(r *mockRequestResetPasswordRepository, email string) (string, error) {
-	return passport.NewRequestResetPassword(requestResetPasswordOptions(r)).Exec(
+	return usecase.NewRequestResetPassword(requestResetPasswordOptions(r)).Exec(
 		context.TODO(),
 		passport.NewEmail(email),
 	)

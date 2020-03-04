@@ -1,14 +1,16 @@
-package passport
+package usecase
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/alextanhongpin/passport"
 )
 
 type (
 	loginRepository interface {
-		WithEmail(ctx context.Context, email string) (*User, error)
+		WithEmail(ctx context.Context, email string) (*passport.User, error)
 	}
 
 	LoginOptions struct {
@@ -27,7 +29,7 @@ type (
 )
 
 // Exec executes the Login use case.
-func (l *Login) Exec(ctx context.Context, cred Credential) (*User, error) {
+func (l *Login) Exec(ctx context.Context, cred passport.Credential) (*passport.User, error) {
 	if err := l.validate(cred); err != nil {
 		return nil, err
 	}
@@ -51,14 +53,14 @@ func (l *Login) Exec(ctx context.Context, cred Credential) (*User, error) {
 	return user, nil
 }
 
-func (l *Login) validate(cred Credential) error {
+func (l *Login) validate(cred passport.Credential) error {
 	return cred.Validate()
 }
 
-func (l *Login) findUser(ctx context.Context, email Email) (*User, error) {
+func (l *Login) findUser(ctx context.Context, email passport.Email) (*passport.User, error) {
 	user, err := l.options.Repository.WithEmail(ctx, email.Value())
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, passport.ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -67,18 +69,18 @@ func (l *Login) findUser(ctx context.Context, email Email) (*User, error) {
 	return user, nil
 }
 
-func (l *Login) checkPasswordMatch(cipherText, plainText Password) error {
+func (l *Login) checkPasswordMatch(cipherText, plainText passport.Password) error {
 	if err := l.options.Comparer.Compare(
 		cipherText.Byte(),
 		plainText.Byte(),
 	); err != nil {
-		return ErrEmailOrPasswordInvalid
+		return passport.ErrEmailOrPasswordInvalid
 	}
 
 	return nil
 }
 
-func (l *Login) checkUserConfirmed(confirmable Confirmable) error {
+func (l *Login) checkUserConfirmed(confirmable passport.Confirmable) error {
 	return confirmable.ValidateUnconfirmed()
 }
 

@@ -1,16 +1,18 @@
-package passport
+package usecase
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/alextanhongpin/passport"
 )
 
 type (
 	changeEmailRepository interface {
+		Find(ctx context.Context, id string) (*passport.User, error)
 		HasEmail(ctx context.Context, email string) (bool, error)
-		Find(ctx context.Context, id string) (*User, error)
-		UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
+		UpdateConfirmable(ctx context.Context, email string, confirmable passport.Confirmable) (bool, error)
 	}
 
 	ChangeEmailOptions struct {
@@ -23,7 +25,7 @@ type (
 	}
 )
 
-func (c *ChangeEmail) Exec(ctx context.Context, currentUserID UserID, email Email) (string, error) {
+func (c *ChangeEmail) Exec(ctx context.Context, currentUserID passport.UserID, email passport.Email) (string, error) {
 	if err := c.validate(currentUserID, email); err != nil {
 		return "", err
 	}
@@ -45,7 +47,7 @@ func (c *ChangeEmail) Exec(ctx context.Context, currentUserID UserID, email Emai
 	return c.createConfirmationToken(ctx, oldEmail, email)
 }
 
-func (c *ChangeEmail) validate(userID UserID, email Email) error {
+func (c *ChangeEmail) validate(userID passport.UserID, email passport.Email) error {
 	if err := email.Validate(); err != nil {
 		return err
 	}
@@ -56,22 +58,22 @@ func (c *ChangeEmail) validate(userID UserID, email Email) error {
 	return nil
 }
 
-func (c *ChangeEmail) checkEmailExists(ctx context.Context, email Email) error {
+func (c *ChangeEmail) checkEmailExists(ctx context.Context, email passport.Email) error {
 	exists, err := c.options.Repository.HasEmail(ctx, email.Value())
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 	if exists {
-		return ErrEmailExists
+		return passport.ErrEmailExists
 	}
 
 	return nil
 }
 
-func (c *ChangeEmail) findUser(ctx context.Context, userID UserID) (*User, error) {
+func (c *ChangeEmail) findUser(ctx context.Context, userID passport.UserID) (*passport.User, error) {
 	user, err := c.options.Repository.Find(ctx, userID.Value())
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, passport.ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -80,8 +82,8 @@ func (c *ChangeEmail) findUser(ctx context.Context, userID UserID) (*User, error
 	return user, nil
 }
 
-func (c *ChangeEmail) checkEmailPresent(user *User) (Email, error) {
-	email := NewEmail(user.Email)
+func (c *ChangeEmail) checkEmailPresent(user *passport.User) (passport.Email, error) {
+	email := passport.NewEmail(user.Email)
 	if err := email.Validate(); err != nil {
 		return email, err
 	}
@@ -89,13 +91,13 @@ func (c *ChangeEmail) checkEmailPresent(user *User) (Email, error) {
 	return email, nil
 }
 
-func (c *ChangeEmail) createConfirmationToken(ctx context.Context, oldEmail, newEmail Email) (string, error) {
+func (c *ChangeEmail) createConfirmationToken(ctx context.Context, oldEmail, newEmail passport.Email) (string, error) {
 	token, err := c.options.TokenGenerator.Generate()
 	if err != nil {
 		return "", err
 	}
 
-	confirmable := NewConfirmable(token, newEmail.Value())
+	confirmable := passport.NewConfirmable(token, newEmail.Value())
 	if _, err = c.options.Repository.UpdateConfirmable(ctx, oldEmail.Value(), confirmable); err != nil {
 		return "", err
 	}

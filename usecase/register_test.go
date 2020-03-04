@@ -1,10 +1,11 @@
-package passport_test
+package usecase_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/usecase"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,15 +56,15 @@ func (m *mockRegisterRepository) Create(ctx context.Context, email, password str
 	return m.user, m.err
 }
 
-func registerOptions(r *mockRegisterRepository) passport.RegisterOptions {
-	return passport.RegisterOptions{
+func registerOptions(r *mockRegisterRepository) usecase.RegisterOptions {
+	return usecase.RegisterOptions{
 		Repository: r,
 		Encoder:    passport.NewArgon2Password(),
 	}
 }
 
 func register(r *mockRegisterRepository, email, password string) (*passport.User, error) {
-	return passport.NewRegister(registerOptions(r)).Exec(
+	return usecase.NewRegister(registerOptions(r)).Exec(
 		context.TODO(),
 		passport.NewCredential(email, password),
 	)

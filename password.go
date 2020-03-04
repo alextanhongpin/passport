@@ -15,21 +15,6 @@ var (
 
 const PasswordMinLen = 8
 
-type (
-	passwordEncoder interface {
-		Encode(password []byte) (string, error)
-	}
-
-	passwordComparer interface {
-		Compare(hash, password []byte) error
-	}
-
-	passwordEncoderComparer interface {
-		passwordEncoder
-		passwordComparer
-	}
-)
-
 type Password struct {
 	minLen   int
 	password string

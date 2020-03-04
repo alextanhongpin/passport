@@ -1,17 +1,19 @@
-package passport
+package usecase
 
 import (
 	"context"
 	"database/sql"
 	"errors"
 	"time"
+
+	"github.com/alextanhongpin/passport"
 )
 
 type (
 	resetPasswordRepository interface {
-		WithResetPasswordToken(ctx context.Context, token string) (*User, error)
+		WithResetPasswordToken(ctx context.Context, token string) (*passport.User, error)
 		UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error)
-		UpdateRecoverable(ctx context.Context, email string, recoverable Recoverable) (bool, error)
+		UpdateRecoverable(ctx context.Context, email string, recoverable passport.Recoverable) (bool, error)
 	}
 
 	ResetPasswordOptions struct {
@@ -25,7 +27,7 @@ type (
 	}
 )
 
-func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirmPassword Password) (*User, error) {
+func (r *ResetPassword) Exec(ctx context.Context, token passport.Token, password, confirmPassword passport.Password) (*passport.User, error) {
 	if err := r.validate(token, password, confirmPassword); err != nil {
 		return nil, err
 	}
@@ -51,7 +53,7 @@ func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirm
 
 	var (
 		userID    = user.UserID()
-		userEmail = NewEmail(user.Email)
+		userEmail = passport.NewEmail(user.Email)
 	)
 	if err := userID.Validate(); err != nil {
 		return nil, err
@@ -66,7 +68,7 @@ func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirm
 		return nil, err
 	}
 
-	var recoverable Recoverable
+	var recoverable passport.Recoverable
 	_, err = r.options.Repository.UpdateRecoverable(ctx, userEmail.Value(), recoverable)
 	if err != nil {
 		return nil, err
@@ -75,7 +77,7 @@ func (r *ResetPassword) Exec(ctx context.Context, token Token, password, confirm
 	return user, nil
 }
 
-func (r *ResetPassword) validate(token Token, password, confirmPassword Password) error {
+func (r *ResetPassword) validate(token passport.Token, password, confirmPassword passport.Password) error {
 	if err := token.Validate(); err != nil {
 		return err
 	}
@@ -89,10 +91,10 @@ func (r *ResetPassword) validate(token Token, password, confirmPassword Password
 	return nil
 }
 
-func (r *ResetPassword) findUser(ctx context.Context, token Token) (*User, error) {
+func (r *ResetPassword) findUser(ctx context.Context, token passport.Token) (*passport.User, error) {
 	user, err := r.options.Repository.WithResetPasswordToken(ctx, token.Value())
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, passport.ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -101,23 +103,23 @@ func (r *ResetPassword) findUser(ctx context.Context, token Token) (*User, error
 	return user, nil
 }
 
-func (r *ResetPassword) checkCanResetPassword(recoverable Recoverable) error {
+func (r *ResetPassword) checkCanResetPassword(recoverable passport.Recoverable) error {
 	if err := recoverable.ValidateExpiry(r.options.RecoverableTokenValidity); err != nil {
 		return err
 	}
 	if !recoverable.AllowPasswordChange {
-		return ErrPasswordChangeNotAllowed
+		return passport.ErrPasswordChangeNotAllowed
 	}
 
 	return nil
 }
 
-func (r *ResetPassword) checkPasswordNotReused(cipherText, plainText Password) error {
+func (r *ResetPassword) checkPasswordNotReused(cipherText, plainText passport.Password) error {
 	if err := r.options.EncoderComparer.Compare(
 		cipherText.Byte(),
 		plainText.Byte(),
 	); err == nil {
-		return ErrPasswordUsed
+		return passport.ErrPasswordUsed
 	}
 
 	return nil

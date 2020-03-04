@@ -1,15 +1,17 @@
-package passport
+package usecase
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/alextanhongpin/passport"
 )
 
 type (
 	sendConfirmationRepository interface {
-		WithEmail(ctx context.Context, email string) (*User, error)
-		UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
+		WithEmail(ctx context.Context, email string) (*passport.User, error)
+		UpdateConfirmable(ctx context.Context, email string, confirmable passport.Confirmable) (bool, error)
 	}
 
 	SendConfirmationOptions struct {
@@ -22,7 +24,7 @@ type (
 	}
 )
 
-func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error) {
+func (s *SendConfirmation) Exec(ctx context.Context, email passport.Email) (string, error) {
 	if err := email.Validate(); err != nil {
 		return "", err
 	}
@@ -40,7 +42,7 @@ func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error
 	if err != nil {
 		return "", err
 	}
-	confirmable := NewConfirmable(token, email.Value())
+	confirmable := passport.NewConfirmable(token, email.Value())
 	_, err = s.options.Repository.UpdateConfirmable(ctx, email.Value(), confirmable)
 	if err != nil {
 		return "", err
@@ -49,10 +51,10 @@ func (s *SendConfirmation) Exec(ctx context.Context, email Email) (string, error
 	return confirmable.ConfirmationToken, nil
 }
 
-func (s *SendConfirmation) findUser(ctx context.Context, email Email) (*User, error) {
+func (s *SendConfirmation) findUser(ctx context.Context, email passport.Email) (*passport.User, error) {
 	user, err := s.options.Repository.WithEmail(ctx, email.Value())
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, passport.ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -60,9 +62,9 @@ func (s *SendConfirmation) findUser(ctx context.Context, email Email) (*User, er
 	return user, nil
 }
 
-func (s *SendConfirmation) checkNotYetConfirmed(confirmable Confirmable) error {
+func (s *SendConfirmation) checkNotYetConfirmed(confirmable passport.Confirmable) error {
 	if verified := confirmable.Verified(); verified {
-		return ErrEmailVerified
+		return passport.ErrEmailVerified
 	}
 	return nil
 }

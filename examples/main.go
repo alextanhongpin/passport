@@ -9,6 +9,7 @@ import (
 	"github.com/alextanhongpin/passport/examples/controller"
 	"github.com/alextanhongpin/passport/examples/database"
 	"github.com/alextanhongpin/passport/examples/service"
+
 	"github.com/alextanhongpin/pkg/gojwt"
 
 	"github.com/julienschmidt/httprouter"
@@ -21,11 +22,12 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
+
 	signer := gojwt.New(gojwt.Option{
 		Secret:       []byte("secret"),
 		ExpiresAfter: 1 * time.Hour,
 	})
-	svc := service.NewAuth(db)
+	svc := service.New(db)
 	ctl := controller.New(svc)
 
 	router := httprouter.New()

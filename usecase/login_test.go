@@ -1,4 +1,4 @@
-package passport_test
+package usecase_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/usecase"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -93,8 +94,8 @@ func (m *mockLoginRepository) WithEmail(ctx context.Context, email string) (*pas
 	return m.User, m.Err
 }
 
-func loginOptions(r *mockLoginRepository) passport.LoginOptions {
-	return passport.LoginOptions{
+func loginOptions(r *mockLoginRepository) usecase.LoginOptions {
+	return usecase.LoginOptions{
 		Repository: r,
 		Comparer:   passport.NewArgon2Password(),
 	}
@@ -104,7 +105,7 @@ func login(
 	r *mockLoginRepository,
 	email, password string,
 ) (*passport.User, error) {
-	svc := passport.NewLogin(loginOptions(r))
+	svc := usecase.NewLogin(loginOptions(r))
 	return svc.Exec(
 		context.TODO(),
 		passport.NewCredential(email, password),

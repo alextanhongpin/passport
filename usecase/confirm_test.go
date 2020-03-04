@@ -1,4 +1,4 @@
-package passport_test
+package usecase_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/usecase"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -100,15 +101,15 @@ func (m *mockConfirmRepository) UpdateConfirmable(ctx context.Context, email str
 	return m.updateConfirmableResponse, m.updateConfirmableError
 }
 
-func confirmOptions(r *mockConfirmRepository) passport.ConfirmOptions {
-	return passport.ConfirmOptions{
+func confirmOptions(r *mockConfirmRepository) usecase.ConfirmOptions {
+	return usecase.ConfirmOptions{
 		Repository:                r,
 		ConfirmationTokenValidity: passport.ConfirmationTokenValidity,
 	}
 }
 
 func confirm(r *mockConfirmRepository, token string) error {
-	return passport.NewConfirm(confirmOptions(r)).Exec(
+	return usecase.NewConfirm(confirmOptions(r)).Exec(
 		context.TODO(),
 		passport.NewToken(token),
 	)

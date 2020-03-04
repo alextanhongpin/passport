@@ -1,4 +1,4 @@
-package passport_test
+package usecase_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/usecase"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -104,15 +105,15 @@ func (m *mockChangeEmailRepository) UpdateConfirmable(ctx context.Context, email
 	return m.updateConfirmableResponse, m.updateConfirmableError
 }
 
-func changeEmailOptions(r *mockChangeEmailRepository) passport.ChangeEmailOptions {
-	return passport.ChangeEmailOptions{
+func changeEmailOptions(r *mockChangeEmailRepository) usecase.ChangeEmailOptions {
+	return usecase.ChangeEmailOptions{
 		Repository:     r,
 		TokenGenerator: passport.NewTokenGenerator(),
 	}
 }
 
 func changeEmail(r *mockChangeEmailRepository, userID, email string) (string, error) {
-	return passport.NewChangeEmail(changeEmailOptions(r)).Exec(
+	return usecase.NewChangeEmail(changeEmailOptions(r)).Exec(
 		context.TODO(),
 		passport.UserID(userID),
 		passport.NewEmail(email),

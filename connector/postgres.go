@@ -3,39 +3,22 @@ package connector
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/alextanhongpin/passport"
 )
 
 // Postgres represents an implementation of the repository for User.
 type Postgres struct {
-	db *sql.DB
+	tx Tx
 }
 
 // NewPostgres returns a new pointer to Postgres struct.
-func NewPostgres(db *sql.DB) *Postgres {
-	return &Postgres{db}
+func NewPostgres(tx Tx) *Postgres {
+	return &Postgres{tx}
 }
 
-func NewNullString(str string) sql.NullString {
-	if str == "" {
-		return sql.NullString{}
-	}
-	return sql.NullString{
-		Valid:  true,
-		String: str,
-	}
-}
-
-func NewNullTime(t time.Time) sql.NullTime {
-	if t.IsZero() {
-		return sql.NullTime{}
-	}
-	return sql.NullTime{
-		Valid: true,
-		Time:  t,
-	}
+func (p *Postgres) WithTx(tx Tx) *Postgres {
+	return &Postgres{tx}
 }
 
 func (p *Postgres) WithEmail(ctx context.Context, email string) (*passport.User, error) {
@@ -52,20 +35,20 @@ func (p *Postgres) WithEmail(ctx context.Context, email string) (*passport.User,
 			confirmed_at,
 			unconfirmed_email
 		FROM 	login
-		WHERE   email = $1	
+		WHERE   email = $1
 	`
-	return getUser(p.db, stmt, email)
+	return getUser(p.tx, stmt, email)
 }
 
 func (p *Postgres) Create(ctx context.Context, email, encryptedPassword string) (*passport.User, error) {
 	stmt := `
-		INSERT INTO login 
+		INSERT INTO login
 			(email, encrypted_password, unconfirmed_email)
 		VALUES 	($1, $2, $1)
 		RETURNING id
 	`
 	var u passport.User
-	if err := p.db.QueryRow(stmt, email, encryptedPassword).Scan(&u.ID); err != nil {
+	if err := p.tx.QueryRow(stmt, email, encryptedPassword).Scan(&u.ID); err != nil {
 		return nil, err
 	}
 	return &u, nil
@@ -79,7 +62,7 @@ func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recovera
 			allow_password_change = $3
 		WHERE 	email = $4
 	`
-	res, err := p.db.Exec(stmt,
+	res, err := p.tx.Exec(stmt,
 		NewNullString(recoverable.ResetPasswordToken),
 		NewNullTime(recoverable.ResetPasswordSentAt),
 		recoverable.AllowPasswordChange,
@@ -106,9 +89,9 @@ func (p *Postgres) WithResetPasswordToken(ctx context.Context, token string) (*p
 			confirmed_at,
 			unconfirmed_email
 		FROM 	login
-		WHERE   reset_password_token = $1	
+		WHERE   reset_password_token = $1
 	`
-	return getUser(p.db, stmt, token)
+	return getUser(p.tx, stmt, token)
 }
 
 func (p *Postgres) UpdatePassword(ctx context.Context, userID string, encryptedPassword string) (bool, error) {
@@ -117,7 +100,7 @@ func (p *Postgres) UpdatePassword(ctx context.Context, userID string, encryptedP
 		SET 	encrypted_password = $1
 		WHERE 	id = $2
 	`
-	res, err := p.db.Exec(stmt, encryptedPassword, userID)
+	res, err := p.tx.Exec(stmt, encryptedPassword, userID)
 	if err != nil {
 		return false, err
 	}
@@ -136,7 +119,7 @@ func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirma
 		WHERE 	email = $5
 	`
 
-	res, err := p.db.Exec(stmt,
+	res, err := p.tx.Exec(stmt,
 		NewNullString(confirmable.ConfirmationToken),
 		NewNullTime(confirmable.ConfirmationSentAt),
 		NewNullTime(confirmable.ConfirmedAt),
@@ -164,9 +147,9 @@ func (p *Postgres) WithConfirmationToken(ctx context.Context, token string) (*pa
 			confirmed_at,
 			unconfirmed_email
 		FROM 	login
-		WHERE   confirmation_token = $1	
+		WHERE   confirmation_token = $1
 	`
-	return getUser(p.db, stmt, token)
+	return getUser(p.tx, stmt, token)
 }
 
 func (p *Postgres) HasEmail(ctx context.Context, email string) (bool, error) {
@@ -174,7 +157,7 @@ func (p *Postgres) HasEmail(ctx context.Context, email string) (bool, error) {
 		SELECT EXISTS (SELECT 1 FROM login WHERE email = $1)
 	`
 	var exists bool
-	if err := p.db.QueryRow(stmt, email).Scan(&exists); err != nil {
+	if err := p.tx.QueryRow(stmt, email).Scan(&exists); err != nil {
 		return false, err
 	}
 	return exists, nil
@@ -194,17 +177,17 @@ func (p *Postgres) Find(ctx context.Context, id string) (*passport.User, error) 
 			confirmed_at,
 			unconfirmed_email
 		FROM 	login
-		WHERE   id = $1	
+		WHERE   id = $1
 	`
-	return getUser(p.db, stmt, id)
+	return getUser(p.tx, stmt, id)
 }
 
-func getUser(db *sql.DB, stmt string, arguments ...interface{}) (*passport.User, error) {
+func getUser(tx Tx, stmt string, arguments ...interface{}) (*passport.User, error) {
 	var u passport.User
 	var resetPasswordToken, confirmationToken sql.NullString
 	var resetPasswordSentAt, confirmationSentAt, confirmedAt sql.NullTime
 	var encryptedPassword string
-	if err := db.QueryRow(stmt, arguments...).Scan(
+	if err := tx.QueryRow(stmt, arguments...).Scan(
 		&u.ID,
 		&u.CreatedAt,
 		&u.Email,

@@ -1,14 +1,16 @@
-package passport
+package usecase
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/alextanhongpin/passport"
 )
 
 type (
 	changePasswordRepository interface {
-		Find(ctx context.Context, id string) (*User, error)
+		Find(ctx context.Context, id string) (*passport.User, error)
 		UpdatePassword(ctx context.Context, userID, encryptedPassword string) (bool, error)
 	}
 
@@ -22,7 +24,7 @@ type (
 	}
 )
 
-func (c *ChangePassword) Exec(ctx context.Context, currentUserID UserID, password, confirmPassword Password) error {
+func (c *ChangePassword) Exec(ctx context.Context, currentUserID passport.UserID, password, confirmPassword passport.Password) error {
 	if err := c.validate(currentUserID, password, confirmPassword); err != nil {
 		return err
 	}
@@ -48,7 +50,7 @@ func (c *ChangePassword) Exec(ctx context.Context, currentUserID UserID, passwor
 	return err
 }
 
-func (c *ChangePassword) validate(userID UserID, password, confirmPassword Password) error {
+func (c *ChangePassword) validate(userID passport.UserID, password, confirmPassword passport.Password) error {
 	if err := password.Equal(confirmPassword); err != nil {
 		return err
 	}
@@ -64,10 +66,10 @@ func (c *ChangePassword) validate(userID UserID, password, confirmPassword Passw
 	return nil
 }
 
-func (c *ChangePassword) findUser(ctx context.Context, userID UserID) (*User, error) {
+func (c *ChangePassword) findUser(ctx context.Context, userID passport.UserID) (*passport.User, error) {
 	user, err := c.options.Repository.Find(ctx, userID.Value())
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, passport.ErrUserNotFound
 	}
 
 	if err != nil {
@@ -77,12 +79,12 @@ func (c *ChangePassword) findUser(ctx context.Context, userID UserID) (*User, er
 	return user, nil
 }
 
-func (c *ChangePassword) checkPasswordNotUsed(cipherText, plainText Password) error {
+func (c *ChangePassword) checkPasswordNotUsed(cipherText, plainText passport.Password) error {
 	if err := c.options.EncoderComparer.Compare(
 		cipherText.Byte(),
 		plainText.Byte(),
 	); err == nil {
-		return ErrPasswordUsed
+		return passport.ErrPasswordUsed
 	}
 
 	return nil

@@ -7,81 +7,92 @@ import (
 
 	"github.com/alextanhongpin/passport"
 	"github.com/alextanhongpin/passport/connector"
+	"github.com/alextanhongpin/passport/examples/database"
 	"github.com/alextanhongpin/passport/examples/mailer"
+	"github.com/alextanhongpin/passport/usecase"
+
 	"github.com/alextanhongpin/pkg/gojwt"
 )
 
 type stdoutMailer interface {
 	Send(mailer.Mail) error
 }
+type encoderComparer interface {
+	Compare(cipherText, plainText []byte) error
+	Encode(plainText []byte) (string, error)
+}
 
 type Auth struct {
-	login                *passport.Login
-	register             *passport.Register
-	changeEmail          *passport.ChangeEmail
-	changePassword       *passport.ChangePassword
-	confirm              *passport.Confirm
-	resetPassword        *passport.ResetPassword
-	sendConfirmation     *passport.SendConfirmation
-	requestResetPassword *passport.RequestResetPassword
+	login          *usecase.Login
+	register       *usecase.Register
+	changeEmail    *usecase.ChangeEmail
+	changePassword *usecase.ChangePassword
+	confirm        *usecase.Confirm
+	// resetPassword        *usecase.ResetPassword
+	sendConfirmation     *usecase.SendConfirmation
+	requestResetPassword *usecase.RequestResetPassword
 
 	mailer stdoutMailer
 	signer gojwt.Signer
+	db     *sql.DB
+	ec     encoderComparer
 }
 
-func NewAuth(db *sql.DB) *Auth {
+func New(db *sql.DB) *Auth {
 	r := connector.NewPostgres(db)
 	ec := passport.NewArgon2Password()
 	tokenGenerator := passport.NewTokenGenerator()
 	m := mailer.NewNoopMailer()
 
 	return &Auth{
+		db:     db,
+		ec:     ec,
 		mailer: m,
-		login: passport.NewLogin(
-			passport.LoginOptions{
+		login: usecase.NewLogin(
+			usecase.LoginOptions{
 				Repository: r,
 				Comparer:   ec,
 			},
 		),
-		register: passport.NewRegister(
-			passport.RegisterOptions{
+		register: usecase.NewRegister(
+			usecase.RegisterOptions{
 				Repository: r,
 				Encoder:    ec,
 			},
 		),
-		changeEmail: passport.NewChangeEmail(
-			passport.ChangeEmailOptions{
+		changeEmail: usecase.NewChangeEmail(
+			usecase.ChangeEmailOptions{
 				Repository:     r,
 				TokenGenerator: tokenGenerator,
 			},
 		),
-		changePassword: passport.NewChangePassword(
-			passport.ChangePasswordOptions{
+		changePassword: usecase.NewChangePassword(
+			usecase.ChangePasswordOptions{
 				Repository:      r,
 				EncoderComparer: ec,
 			},
 		),
-		confirm: passport.NewConfirm(
-			passport.ConfirmOptions{
+		confirm: usecase.NewConfirm(
+			usecase.ConfirmOptions{
 				Repository:                r,
 				ConfirmationTokenValidity: passport.ConfirmationTokenValidity,
 			},
 		),
-		resetPassword: passport.NewResetPassword(
-			passport.ResetPasswordOptions{
-				Repository:               r,
-				EncoderComparer:          ec,
-				RecoverableTokenValidity: passport.RecoverableTokenValidity,
-			},
-		),
-		sendConfirmation: passport.NewSendConfirmation(
-			passport.SendConfirmationOptions{
+		// resetPassword: usecase.NewResetPassword(
+		//         usecase.ResetPasswordOptions{
+		//                 Repository:               r,
+		//                 EncoderComparer:          ec,
+		//                 RecoverableTokenValidity: passport.RecoverableTokenValidity,
+		//         },
+		// ),
+		sendConfirmation: usecase.NewSendConfirmation(
+			usecase.SendConfirmationOptions{
 				Repository:     r,
 				TokenGenerator: tokenGenerator,
 			},
 		),
-		requestResetPassword: passport.NewRequestResetPassword(
-			passport.RequestResetPasswordOptions{
+		requestResetPassword: usecase.NewRequestResetPassword(
+			usecase.RequestResetPasswordOptions{
 				Repository:     r,
 				TokenGenerator: tokenGenerator,
 			},
@@ -221,15 +232,28 @@ type (
 )
 
 func (a *Auth) ResetPassword(ctx context.Context, req ResetPasswordRequest) (*ResetPasswordResponse, error) {
-	user, err := a.resetPassword.Exec(
-		ctx,
-		passport.NewToken(req.Token),
-		passport.NewPassword(req.Password),
-		passport.NewPassword(req.ConfirmPassword),
-	)
+	var user *passport.User
+	err := database.WithTransaction(a.db, func(tx connector.Tx) error {
+		resetPassword := usecase.NewResetPassword(
+			usecase.ResetPasswordOptions{
+				Repository:               connector.NewPostgres(tx),
+				EncoderComparer:          a.ec,
+				RecoverableTokenValidity: passport.RecoverableTokenValidity,
+			},
+		)
+		var err error
+		user, err = resetPassword.Exec(
+			ctx,
+			passport.NewToken(req.Token),
+			passport.NewPassword(req.Password),
+			passport.NewPassword(req.ConfirmPassword),
+		)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
+
 	return &ResetPasswordResponse{
 		ID: user.ID,
 	}, nil

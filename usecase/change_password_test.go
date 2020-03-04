@@ -1,4 +1,4 @@
-package passport_test
+package usecase_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/alextanhongpin/passport"
+	"github.com/alextanhongpin/passport/usecase"
 	"github.com/alextanhongpin/passwd"
 
 	"github.com/stretchr/testify/assert"
@@ -106,15 +107,15 @@ func (m *mockChangePasswordRepository) UpdatePassword(ctx context.Context, userI
 	return m.updatePasswordResponse, m.updatePasswordError
 }
 
-func changePasswordOptions(r *mockChangePasswordRepository) passport.ChangePasswordOptions {
-	return passport.ChangePasswordOptions{
+func changePasswordOptions(r *mockChangePasswordRepository) usecase.ChangePasswordOptions {
+	return usecase.ChangePasswordOptions{
 		Repository:      r,
 		EncoderComparer: passport.NewArgon2Password(),
 	}
 }
 
 func changePassword(r *mockChangePasswordRepository, userID, password, confirmPassword string) error {
-	return passport.NewChangePassword(changePasswordOptions(r)).Exec(
+	return usecase.NewChangePassword(changePasswordOptions(r)).Exec(
 		context.TODO(),
 		passport.NewUserID(userID),
 		passport.NewPassword(password),

@@ -1,16 +1,18 @@
-package passport
+package usecase
 
 import (
 	"context"
 	"database/sql"
 	"errors"
 	"time"
+
+	"github.com/alextanhongpin/passport"
 )
 
 type (
 	confirmRepository interface {
-		WithConfirmationToken(ctx context.Context, token string) (*User, error)
-		UpdateConfirmable(ctx context.Context, email string, confirmable Confirmable) (bool, error)
+		WithConfirmationToken(ctx context.Context, token string) (*passport.User, error)
+		UpdateConfirmable(ctx context.Context, email string, confirmable passport.Confirmable) (bool, error)
 	}
 
 	ConfirmOptions struct {
@@ -23,7 +25,7 @@ type (
 	}
 )
 
-func (c *Confirm) Exec(ctx context.Context, token Token) error {
+func (c *Confirm) Exec(ctx context.Context, token passport.Token) error {
 	if err := token.Validate(); err != nil {
 		return err
 	}
@@ -45,15 +47,15 @@ func (c *Confirm) Exec(ctx context.Context, token Token) error {
 		return err
 	}
 
-	var confirmable Confirmable
+	var confirmable passport.Confirmable
 	_, err = c.options.Repository.UpdateConfirmable(ctx, user.Email, confirmable)
 	return err
 }
 
-func (c *Confirm) findUser(ctx context.Context, token Token) (*User, error) {
+func (c *Confirm) findUser(ctx context.Context, token passport.Token) (*passport.User, error) {
 	user, err := c.options.Repository.WithConfirmationToken(ctx, token.Value())
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, passport.ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -62,16 +64,16 @@ func (c *Confirm) findUser(ctx context.Context, token Token) (*User, error) {
 	return user, nil
 }
 
-func (c *Confirm) checkEmailPresent(user *User) error {
-	email := NewEmail(user.Email)
+func (c *Confirm) checkEmailPresent(user *passport.User) error {
+	email := passport.NewEmail(user.Email)
 	return email.Validate()
 }
 
-func (c *Confirm) checkCanConfirm(confirmable Confirmable) error {
+func (c *Confirm) checkCanConfirm(confirmable passport.Confirmable) error {
 	return confirmable.ValidateConfirmed()
 }
 
-func (c *Confirm) checkConfirmationTokenValid(confirmable Confirmable) error {
+func (c *Confirm) checkConfirmationTokenValid(confirmable passport.Confirmable) error {
 	return confirmable.ValidateExpiry(c.options.ConfirmationTokenValidity)
 }
 
