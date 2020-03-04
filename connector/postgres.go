@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/alextanhongpin/passport"
 )
@@ -22,31 +23,17 @@ func (p *Postgres) WithTx(tx Tx) *Postgres {
 }
 
 func (p *Postgres) WithEmail(ctx context.Context, email string) (*passport.User, error) {
-	stmt := `
-		SELECT 	id,
-			created_at,
-			email,
-			encrypted_password,
-			reset_password_token,
-			reset_password_sent_at,
-			allow_password_change,
-			confirmation_token,
-			confirmation_sent_at,
-			confirmed_at,
-			unconfirmed_email
-		FROM 	login
-		WHERE   email = $1
-	`
+	stmt := selectUserStmt(table, "email = $1")
 	return getUser(p.tx, stmt, email)
 }
 
 func (p *Postgres) Create(ctx context.Context, email, encryptedPassword string) (*passport.User, error) {
-	stmt := `
-		INSERT INTO login
+	stmt := fmt.Sprintf(`
+		INSERT INTO %s
 			(email, encrypted_password, unconfirmed_email)
 		VALUES 	($1, $2, $1)
 		RETURNING id
-	`
+	`, table)
 	var u passport.User
 	if err := p.tx.QueryRow(stmt, email, encryptedPassword).Scan(&u.ID); err != nil {
 		return nil, err
@@ -55,13 +42,13 @@ func (p *Postgres) Create(ctx context.Context, email, encryptedPassword string) 
 }
 
 func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recoverable passport.Recoverable) (bool, error) {
-	stmt := `
-		UPDATE  login
+	stmt := fmt.Sprintf(`
+		UPDATE  %s
 		SET 	reset_password_token = $1,
 			reset_password_sent_at = $2,
 			allow_password_change = $3
 		WHERE 	email = $4
-	`
+	`, table)
 	res, err := p.tx.Exec(stmt,
 		NewNullString(recoverable.ResetPasswordToken),
 		NewNullTime(recoverable.ResetPasswordSentAt),
@@ -76,30 +63,16 @@ func (p *Postgres) UpdateRecoverable(ctx context.Context, email string, recovera
 }
 
 func (p *Postgres) WithResetPasswordToken(ctx context.Context, token string) (*passport.User, error) {
-	stmt := `
-		SELECT 	id,
-			created_at,
-			email,
-			encrypted_password,
-			reset_password_token,
-			reset_password_sent_at,
-			allow_password_change,
-			confirmation_token,
-			confirmation_sent_at,
-			confirmed_at,
-			unconfirmed_email
-		FROM 	login
-		WHERE   reset_password_token = $1
-	`
+	stmt := selectUserStmt(table, "reset_password_token = $1")
 	return getUser(p.tx, stmt, token)
 }
 
 func (p *Postgres) UpdatePassword(ctx context.Context, userID string, encryptedPassword string) (bool, error) {
-	stmt := `
-		UPDATE 	login
+	stmt := fmt.Sprintf(`
+		UPDATE  %s
 		SET 	encrypted_password = $1
 		WHERE 	id = $2
-	`
+	`)
 	res, err := p.tx.Exec(stmt, encryptedPassword, userID)
 	if err != nil {
 		return false, err
@@ -109,15 +82,15 @@ func (p *Postgres) UpdatePassword(ctx context.Context, userID string, encryptedP
 }
 
 func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirmable passport.Confirmable) (bool, error) {
-	stmt := `
-		UPDATE 	login
+	stmt := fmt.Sprintf(`
+		UPDATE  %s
 		SET 	email = COALESCE(NULLIF($4, ''), email),
 			confirmation_token = $1,
 			confirmation_sent_at = $2,
 			confirmed_at = COALESCE($3, now()),
 			unconfirmed_email = $4
 		WHERE 	email = $5
-	`
+	`, table)
 
 	res, err := p.tx.Exec(stmt,
 		NewNullString(confirmable.ConfirmationToken),
@@ -134,21 +107,7 @@ func (p *Postgres) UpdateConfirmable(ctx context.Context, email string, confirma
 }
 
 func (p *Postgres) WithConfirmationToken(ctx context.Context, token string) (*passport.User, error) {
-	stmt := `
-		SELECT 	id,
-			created_at,
-			email,
-			encrypted_password,
-			reset_password_token,
-			reset_password_sent_at,
-			allow_password_change,
-			confirmation_token,
-			confirmation_sent_at,
-			confirmed_at,
-			unconfirmed_email
-		FROM 	login
-		WHERE   confirmation_token = $1
-	`
+	stmt := selectUserStmt(table, "confirmation_token = $1")
 	return getUser(p.tx, stmt, token)
 }
 
@@ -164,21 +123,7 @@ func (p *Postgres) HasEmail(ctx context.Context, email string) (bool, error) {
 }
 
 func (p *Postgres) Find(ctx context.Context, id string) (*passport.User, error) {
-	stmt := `
-		SELECT 	id,
-			created_at,
-			email,
-			encrypted_password,
-			reset_password_token,
-			reset_password_sent_at,
-			allow_password_change,
-			confirmation_token,
-			confirmation_sent_at,
-			confirmed_at,
-			unconfirmed_email
-		FROM 	login
-		WHERE   id = $1
-	`
+	stmt := selectUserStmt(table, "id = $1")
 	return getUser(p.tx, stmt, id)
 }
 
