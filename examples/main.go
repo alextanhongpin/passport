@@ -27,7 +27,7 @@ func main() {
 		Secret:       []byte("secret"),
 		ExpiresAfter: 1 * time.Hour,
 	})
-	svc := service.New(db)
+	svc := service.New(db, signer)
 	ctl := controller.New(svc)
 
 	router := httprouter.New()

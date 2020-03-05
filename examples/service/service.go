@@ -38,7 +38,7 @@ type Auth struct {
 	ec     encoderComparer
 }
 
-func New(db *sql.DB) *Auth {
+func New(db *sql.DB, signer gojwt.Signer) *Auth {
 	r := connector.NewPostgres(db)
 	ec := passport.NewArgon2Password()
 	tokenGenerator := passport.NewTokenGenerator()
@@ -48,6 +48,7 @@ func New(db *sql.DB) *Auth {
 		db:     db,
 		ec:     ec,
 		mailer: m,
+		signer: signer,
 		login: usecase.NewLogin(
 			usecase.LoginOptions{
 				Repository: r,

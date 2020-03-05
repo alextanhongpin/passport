@@ -3,8 +3,10 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/alextanhongpin/passport/connector"
 	"github.com/alextanhongpin/passport/examples/api"
 	"github.com/alextanhongpin/passport/examples/service"
 
@@ -61,6 +63,10 @@ func (ctl *Controller) PostRegister(w http.ResponseWriter, r *http.Request, ps h
 
 	res, err := ctl.service.Register(r.Context(), req)
 	if err != nil {
+		if ok := connector.PgDuplicateError(err); ok {
+			api.JSON(w, api.NewError(errors.New("duplicate user")), http.StatusBadRequest)
+			return
+		}
 		api.JSON(w, api.NewError(err), http.StatusBadRequest)
 		return
 	}
