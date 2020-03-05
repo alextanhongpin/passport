@@ -72,7 +72,7 @@ func (p *Postgres) UpdatePassword(ctx context.Context, userID string, encryptedP
 		UPDATE  %s
 		SET 	encrypted_password = $1
 		WHERE 	id = $2
-	`)
+	`, table)
 	res, err := p.tx.Exec(stmt, encryptedPassword, userID)
 	if err != nil {
 		return false, err
@@ -112,9 +112,11 @@ func (p *Postgres) WithConfirmationToken(ctx context.Context, token string) (*pa
 }
 
 func (p *Postgres) HasEmail(ctx context.Context, email string) (bool, error) {
-	stmt := `
-		SELECT EXISTS (SELECT 1 FROM login WHERE email = $1)
-	`
+	stmt := fmt.Sprintf(`
+		SELECT EXISTS (
+			SELECT 1 FROM %s WHERE email = $1
+		)
+	`, table)
 	var exists bool
 	if err := p.tx.QueryRow(stmt, email).Scan(&exists); err != nil {
 		return false, err
